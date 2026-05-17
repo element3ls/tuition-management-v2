@@ -1437,7 +1437,7 @@ Use this checklist while implementing.
 - [x] Add Playwright tests.
 - [x] Complete security checklist.
 - [x] Deploy staging.
-- [ ] Support UAT.
+- [x] Support UAT.
 - [x] Deploy production.
 - [ ] Create admin usage guide.
 
@@ -1457,7 +1457,7 @@ Use this checklist while implementing.
 - 2026-05-17: Vercel deployment is reachable at `https://tuition-management-v2.vercel.app/login`; unauthenticated `/dashboard` and `/admin` requests redirect to `/login`. Full deployed login UAT still requires known passwords for the existing Supabase seed users.
 - 2026-05-18: Added service-role database grants in migration `0003_service_role_grants.sql`; without these grants, server role/profile lookups failed against live Supabase and users landed on access denied after login.
 - 2026-05-18: Created dedicated live UAT users `uat-student@example.com` and `uat-admin@example.com`; credentials are stored only in ignored local file `.supabase/uat-users.local.json`.
-- 2026-05-18: Latest local code passes E2E against live Supabase using UAT users. Deployed UAT remains pending until Vercel is manually redeployed from latest `main` because auto-deploy is not enabled.
+- 2026-05-18: Latest local code passes E2E against live Supabase using UAT users. Deployed UAT passed after manual Vercel production redeploy from latest `main`.
 
 ---
 
@@ -1474,7 +1474,7 @@ Use this checklist while implementing.
 - [x] Vercel login page is reachable.
 - [x] Deployed protected routes redirect logged-out users to `/login`.
 - [x] Local E2E passes against live Supabase using UAT users.
-- [ ] Deployed E2E passes against live Supabase. Pending manual Vercel deploy of latest `main`.
+- [x] Deployed E2E passes against live Supabase.
 - [x] Permission resolver tests pass.
 - [x] Signed URL authorization tests pass.
 - [x] Search filtering tests pass.
