@@ -10,8 +10,10 @@
     "test": "vitest run tests/unit tests/integration",
     "test:watch": "vitest tests/unit tests/integration",
     "test:e2e": "node scripts/run-e2e.mjs",
+    "test:e2e:live": "node scripts/run-live-e2e.mjs",
     "db:check": "node scripts/check-migrations.mjs",
     "db:live": "node scripts/apply-live-supabase.mjs",
+    "db:create-uat-users": "node scripts/create-live-uat-users.mjs",
     "db:verify-live": "node scripts/verify-live-supabase.mjs"
   },
   "dependencies": {

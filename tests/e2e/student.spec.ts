@@ -1,15 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const studentEmail = process.env.E2E_STUDENT_EMAIL ?? "student@example.com";
+const adminEmail = process.env.E2E_ADMIN_EMAIL ?? "admin@example.com";
+const password = process.env.E2E_PASSWORD ?? "password";
+
 async function login(page: Page, email: string) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("password");
+  await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).not.toHaveURL(/\/login/);
 }
 
 test("student can browse assigned content, search, and open material", async ({ page }) => {
-  await login(page, "student@example.com");
+  await login(page, studentEmail);
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await page.getByText("Mathematics").click();
   await expect(page.getByRole("heading", { name: "Mathematics" })).toBeVisible();
@@ -24,13 +28,13 @@ test("student can browse assigned content, search, and open material", async ({ 
 });
 
 test("student cannot access admin", async ({ page }) => {
-  await login(page, "student@example.com");
+  await login(page, studentEmail);
   await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "Access denied" })).toBeVisible();
 });
 
 test("admin can open CMS", async ({ page }) => {
-  await login(page, "admin@example.com");
+  await login(page, adminEmail);
   await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
   await page.getByRole("link", { name: "Content" }).click();
   await expect(page.getByRole("heading", { name: "Syllabus content" })).toBeVisible();

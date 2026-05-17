@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { cloneDemoData } from "@/lib/demo-data";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { demoUserCookie } from "@/lib/auth/session";
+import { hasAdminRole } from "@/lib/auth/roles";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "@/features/auth/validation";
 import { logActivityEvent } from "@/lib/activity/log";
@@ -44,13 +46,36 @@ export async function loginAction(formData: FormData) {
   }
 
   const supabase = await createServerSupabaseClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect("/dashboard");
+  const userId = data.user?.id;
+  if (!userId) {
+    redirect("/login?error=Unable%20to%20read%20user%20session");
+  }
+
+  await logActivityEvent({
+    userId,
+    eventType: "login",
+    resourceType: null,
+    resourceId: null,
+    metadata: { mode: "supabase" }
+  });
+
+  const admin = createAdminClient();
+  const { data: roles } = await admin.from("user_roles").select("roles(name)").eq("user_id", userId);
+  const roleNames =
+    roles
+      ?.map((row) => {
+        const roleRecord = row.roles as { name?: string } | { name?: string }[] | null;
+        return Array.isArray(roleRecord) ? roleRecord[0]?.name : roleRecord?.name;
+      })
+      .filter((role): role is "student" | "teacher" | "admin" | "super_admin" => Boolean(role)) ?? [];
+
+  redirect(hasAdminRole(roleNames) ? "/admin" : "/dashboard");
 }
 
 export async function logoutAction() {
