@@ -41,6 +41,12 @@ npm run dev
 
 Open `http://127.0.0.1:3000` or `http://localhost:3000`.
 
+Deployed app:
+
+```text
+https://tuition-management-v2.vercel.app
+```
+
 ## Quality Commands
 
 ```bash
@@ -244,4 +250,6 @@ scripts                 Local verification helpers
 
 ## Deployment Notes
 
-Use separate Supabase projects for local, staging, and production. Set environment variables per environment, run migrations, seed or create the first super admin, verify private buckets, then deploy the Next.js app to Vercel or the chosen host.
+Use separate Supabase projects for local, staging, and production when moving beyond MVP validation. Set environment variables per environment, run migrations, seed or create the first super admin, verify private buckets, then deploy the Next.js app to Vercel or the chosen host.
+
+Current Vercel deployment is live at `https://tuition-management-v2.vercel.app`. Logged-out `/dashboard` and `/admin` requests redirect to `/login`.

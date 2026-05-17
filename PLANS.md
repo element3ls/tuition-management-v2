@@ -1436,9 +1436,9 @@ Use this checklist while implementing.
 - [x] Add integration tests.
 - [x] Add Playwright tests.
 - [x] Complete security checklist.
-- [ ] Deploy staging.
+- [x] Deploy staging.
 - [ ] Support UAT.
-- [ ] Deploy production.
+- [x] Deploy production.
 - [ ] Create admin usage guide.
 
 ---
@@ -1454,6 +1454,7 @@ Use this checklist while implementing.
 - 2026-05-17: Do not run `next build` and Playwright E2E in parallel because both write `.next`; validation now runs them sequentially.
 - 2026-05-17: Local validation passed: lint, typecheck, unit/integration tests, migration check, production build, and Playwright E2E.
 - 2026-05-17: Live Supabase migrations and seed completed using `SUPABASE_DB_URL`; existing `student@example.com` and `admin@example.com` auth users were reused, so passwords were not changed. Demo PDF was uploaded to private `solution-materials` storage and signed URL creation was verified.
+- 2026-05-17: Vercel deployment is reachable at `https://tuition-management-v2.vercel.app/login`; unauthenticated `/dashboard` and `/admin` requests redirect to `/login`. Full deployed login UAT still requires known passwords for the existing Supabase seed users.
 
 ---
 
@@ -1467,6 +1468,8 @@ Use this checklist while implementing.
 - [x] Live Supabase migrations run cleanly.
 - [x] Live Supabase seed data inserts cleanly.
 - [x] `npm run db:verify-live` verifies live auth users, seeded content, private bucket, and signed URL creation.
+- [x] Vercel login page is reachable.
+- [x] Deployed protected routes redirect logged-out users to `/login`.
 - [x] Permission resolver tests pass.
 - [x] Signed URL authorization tests pass.
 - [x] Search filtering tests pass.
