@@ -1439,7 +1439,7 @@ Use this checklist while implementing.
 - [x] Deploy staging.
 - [x] Support UAT.
 - [x] Deploy production.
-- [ ] Create admin usage guide.
+- [x] Create admin usage guide.
 
 ---
 
@@ -1458,6 +1458,7 @@ Use this checklist while implementing.
 - 2026-05-18: Added service-role database grants in migration `0003_service_role_grants.sql`; without these grants, server role/profile lookups failed against live Supabase and users landed on access denied after login.
 - 2026-05-18: Created dedicated live UAT users `uat-student@example.com` and `uat-admin@example.com`; credentials are stored only in ignored local file `.supabase/uat-users.local.json`.
 - 2026-05-18: Latest local code passes E2E against live Supabase using UAT users. Deployed UAT passed after manual Vercel production redeploy from latest `main`.
+- 2026-05-18: Added `ADMIN_USAGE_GUIDE.md` for client handoff and marked MVP completion checklist complete.
 
 ---
 

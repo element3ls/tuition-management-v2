@@ -4,6 +4,8 @@
 
 Tuition Management System is a Next.js MVP for tuition centers to assign learning content to students. Admins manage students, groups, syllabus content, YouTube recordings, private solution files, access grants, audit logs, and tags. Students only see published content they can access.
 
+Client-facing admin instructions live in `ADMIN_USAGE_GUIDE.md`.
+
 ## Local Setup
 
 1. Install dependencies:
