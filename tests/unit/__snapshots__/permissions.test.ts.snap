@@ -1,0 +1,98 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`permission resolver > returns deterministic accessible ids and tree 1`] = `
+{
+  "years": [
+    {
+      "created_at": "2026-05-17T00:00:00.000Z",
+      "description": "Lower secondary foundation year.",
+      "id": "20000000-0000-4000-8000-000000000001",
+      "is_ai_indexable": true,
+      "name": "Year 7",
+      "sort_order": 1,
+      "status": "published",
+      "subjects": [
+        {
+          "chapters": [
+            {
+              "created_at": "2026-05-17T00:00:00.000Z",
+              "description": "Solving one-variable equations step by step.",
+              "id": "40000000-0000-4000-8000-000000000001",
+              "is_ai_indexable": true,
+              "materials": [
+                {
+                  "chapter_id": "40000000-0000-4000-8000-000000000001",
+                  "created_at": "2026-05-17T00:00:00.000Z",
+                  "description": "PDF solution notes for the demo question.",
+                  "file_key": "demo/linear-equations-solution.pdf",
+                  "file_name": "linear-equations-solution.pdf",
+                  "file_size_bytes": 24576,
+                  "id": "70000000-0000-4000-8000-000000000001",
+                  "is_ai_indexable": true,
+                  "is_downloadable": true,
+                  "mime_type": "application/pdf",
+                  "question_id": "50000000-0000-4000-8000-000000000001",
+                  "status": "published",
+                  "storage_bucket": "solution-materials",
+                  "title": "Linear Equations Solution Sheet",
+                  "updated_at": "2026-05-17T00:00:00.000Z",
+                  "uploaded_by": "00000000-0000-4000-8000-000000000002",
+                },
+              ],
+              "questions": [
+                {
+                  "chapter_id": "40000000-0000-4000-8000-000000000001",
+                  "created_at": "2026-05-17T00:00:00.000Z",
+                  "description": "Worked algebra question.",
+                  "id": "50000000-0000-4000-8000-000000000001",
+                  "is_ai_indexable": true,
+                  "question_text": "Solve 2x + 5 = 17.",
+                  "sort_order": 1,
+                  "status": "published",
+                  "title": "Balancing Equations",
+                  "updated_at": "2026-05-17T00:00:00.000Z",
+                },
+              ],
+              "recordings": [
+                {
+                  "chapter_id": "40000000-0000-4000-8000-000000000001",
+                  "created_at": "2026-05-17T00:00:00.000Z",
+                  "created_by": "00000000-0000-4000-8000-000000000002",
+                  "description": "Teacher walkthrough for balancing equations.",
+                  "duration_seconds": 420,
+                  "id": "60000000-0000-4000-8000-000000000001",
+                  "is_ai_indexable": true,
+                  "question_id": "50000000-0000-4000-8000-000000000001",
+                  "recorded_at": "2026-05-17T00:00:00.000Z",
+                  "status": "published",
+                  "title": "Solving 2x + 5 = 17",
+                  "transcript_review_status": "approved",
+                  "transcript_source": "manual",
+                  "transcript_text": "Move 5 to the other side, then divide by 2.",
+                  "updated_at": "2026-05-17T00:00:00.000Z",
+                  "youtube_video_id": "dQw4w9WgXcQ",
+                },
+              ],
+              "sort_order": 1,
+              "status": "published",
+              "subject_id": "30000000-0000-4000-8000-000000000001",
+              "title": "Linear Equations",
+              "updated_at": "2026-05-17T00:00:00.000Z",
+            },
+          ],
+          "created_at": "2026-05-17T00:00:00.000Z",
+          "description": "Core mathematics lessons and worked examples.",
+          "id": "30000000-0000-4000-8000-000000000001",
+          "is_ai_indexable": true,
+          "name": "Mathematics",
+          "sort_order": 1,
+          "status": "published",
+          "updated_at": "2026-05-17T00:00:00.000Z",
+          "year_id": "20000000-0000-4000-8000-000000000001",
+        },
+      ],
+      "updated_at": "2026-05-17T00:00:00.000Z",
+    },
+  ],
+}
+`;
