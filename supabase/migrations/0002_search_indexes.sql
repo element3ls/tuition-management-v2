@@ -47,5 +47,5 @@ as $$
     ts_rank(to_tsvector('english', coalesce(m.title, '') || ' ' || coalesce(m.description, '') || ' ' || coalesce(m.file_name, '')), query.q) as rank
   from public.solution_materials m, query
   where query.q @@ to_tsvector('english', coalesce(m.title, '') || ' ' || coalesce(m.description, '') || ' ' || coalesce(m.file_name, ''))
-  order by rank desc, title asc, resource_id asc;
+  order by 5 desc, 3 asc, 2 asc;
 $$;

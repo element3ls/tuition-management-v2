@@ -50,9 +50,14 @@ npm test
 npm run test:e2e
 npm run build
 npm run db:check
+npm run db:live
 ```
 
 `npm run test:e2e` starts a local Next.js dev server, runs Playwright, then stops the server.
+
+`npm run db:live` applies migrations and seed data to the Supabase project configured by `SUPABASE_DB_URL`.
+
+`npm run db:verify-live` verifies the live project has seeded auth users, profile/content rows, a private `solution-materials` bucket, and working signed URL creation.
 
 ## Database And Seeds
 

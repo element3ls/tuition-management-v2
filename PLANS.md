@@ -1453,6 +1453,7 @@ Use this checklist while implementing.
 - 2026-05-17: Deployment/UAT steps that require external accounts will be documented and prepared in code, with final live deployment blocked until Supabase/Vercel credentials are supplied.
 - 2026-05-17: Do not run `next build` and Playwright E2E in parallel because both write `.next`; validation now runs them sequentially.
 - 2026-05-17: Local validation passed: lint, typecheck, unit/integration tests, migration check, production build, and Playwright E2E.
+- 2026-05-17: Live Supabase migrations and seed completed using `SUPABASE_DB_URL`; existing `student@example.com` and `admin@example.com` auth users were reused, so passwords were not changed. Demo PDF was uploaded to private `solution-materials` storage and signed URL creation was verified.
 
 ---
 
@@ -1463,8 +1464,9 @@ Use this checklist while implementing.
 - [x] `npm run typecheck` passes.
 - [x] `npm test` passes.
 - [x] `npm run db:check` verifies required migration files.
-- [ ] Live Supabase migrations run cleanly. Blocked until Supabase project credentials are supplied.
-- [ ] Live Supabase seed data inserts cleanly. Blocked until Supabase project credentials are supplied.
+- [x] Live Supabase migrations run cleanly.
+- [x] Live Supabase seed data inserts cleanly.
+- [x] `npm run db:verify-live` verifies live auth users, seeded content, private bucket, and signed URL creation.
 - [x] Permission resolver tests pass.
 - [x] Signed URL authorization tests pass.
 - [x] Search filtering tests pass.

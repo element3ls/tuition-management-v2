@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { cloneDemoData } from "@/lib/demo-data";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { adminRoles, hasAnyRole } from "@/lib/auth/roles";
 import type { Profile, RoleName } from "@/types/domain";
 
@@ -30,7 +31,8 @@ export async function getCurrentUser(): Promise<Profile | null> {
     return null;
   }
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const admin = createAdminClient();
+  const { data: profile } = await admin.from("profiles").select("*").eq("id", user.id).single();
 
   return (
     profile ?? {
@@ -55,7 +57,7 @@ export async function getCurrentUserRoles(): Promise<RoleName[]> {
       .sort();
   }
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = createAdminClient();
   const { data } = await supabase.from("user_roles").select("roles(name)").eq("user_id", user.id);
 
   return (data ?? [])
