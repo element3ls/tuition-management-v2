@@ -16,7 +16,7 @@ export default async function TagsPage() {
         description="Edit keyword labels and slugs for discovery and future AI metadata."
         actions={
           <AdminDialog title="Create tag" trigger={<CreateButton>New tag</CreateButton>}>
-            <form action={createTagAction} className="grid gap-3">
+            <form action={createTagAction} className="grid gap-3" data-mutation-form>
               <Field label="Name">
                 <Input name="name" required />
               </Field>
@@ -42,7 +42,7 @@ export default async function TagsPage() {
                 <TableCell>{tag.slug}</TableCell>
                 <TableCell className="text-right">
                   <AdminDialog title="Edit tag" trigger={<EditButton />}>
-                    <form action={updateTagAction} className="grid gap-3">
+                    <form action={updateTagAction} className="grid gap-3" data-mutation-form>
                       <input name="tag_id" type="hidden" value={tag.id} />
                       <Field label="Name">
                         <Input name="name" defaultValue={tag.name} required />

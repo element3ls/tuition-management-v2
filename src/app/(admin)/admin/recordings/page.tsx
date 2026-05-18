@@ -59,7 +59,7 @@ export default async function RecordingsPage() {
         description="Maintain YouTube embeds, chapter links, transcript metadata, and publishing status."
         actions={
           <AdminDialog title="Create recording" trigger={<CreateButton>New recording</CreateButton>}>
-            <form action={createRecordingAction} className="grid gap-3">
+            <form action={createRecordingAction} className="grid gap-3" data-mutation-form>
               {recordingForm()}
               <Button type="submit">Create recording</Button>
             </form>
@@ -89,7 +89,7 @@ export default async function RecordingsPage() {
                 <TableCell><StatusBadge status={recording.status} /></TableCell>
                 <TableCell className="text-right">
                   <AdminDialog title="Edit recording" trigger={<EditButton />}>
-                    <form action={updateRecordingAction} className="grid gap-3">
+                    <form action={updateRecordingAction} className="grid gap-3" data-mutation-form>
                       {recordingForm(recording)}
                       <Button type="submit">Save changes</Button>
                     </form>

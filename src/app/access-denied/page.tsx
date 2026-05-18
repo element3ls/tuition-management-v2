@@ -19,7 +19,7 @@ export default function AccessDeniedPage() {
           <Link className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted" href="/login">
             Go to login
           </Link>
-          <form action={logoutAction}>
+          <form action={logoutAction} data-mutation-form>
             <Button className="w-full" type="submit" variant="outline">
               Log out
             </Button>

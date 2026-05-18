@@ -29,7 +29,7 @@ export default async function AccessPage() {
         description="Grant direct or group access to syllabus resources and private materials."
         actions={
           <AdminDialog title="Create access grant" trigger={<CreateButton>New grant</CreateButton>}>
-            <form action={createAccessGrantAction} className="grid gap-3">
+            <form action={createAccessGrantAction} className="grid gap-3" data-mutation-form>
               <Field label="Grantee type">
                 <Select name="grantee_type">
                   <option value="group">Group</option>
@@ -101,7 +101,7 @@ export default async function AccessPage() {
                 <TableCell><StatusBadge status={grant.revoked_at ? "revoked" : "active"} /></TableCell>
                 <TableCell className="text-right">
                   {!grant.revoked_at ? (
-                    <form action={revokeAccessGrantAction}>
+                    <form action={revokeAccessGrantAction} data-mutation-form>
                       <input name="grant_id" type="hidden" value={grant.id} />
                       <Button type="submit" variant="outline" size="sm">Revoke</Button>
                     </form>

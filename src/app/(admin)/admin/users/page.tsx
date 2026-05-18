@@ -25,7 +25,7 @@ export default async function UsersPage() {
         description="Maintain student profiles, login emails, guardians, and account status."
         actions={
           <AdminDialog title="Create student" description="Create login access and the student profile." trigger={<CreateButton>New student</CreateButton>}>
-            <form action={createStudentAction} className="grid gap-3">
+            <form action={createStudentAction} className="grid gap-3" data-mutation-form>
               <Field label="Full name">
                 <Input name="full_name" required />
               </Field>
@@ -76,7 +76,7 @@ export default async function UsersPage() {
                 <TableCell>
                   <div className="flex justify-end gap-2">
                     <AdminDialog title="Edit student" trigger={<EditButton />}>
-                      <form action={updateStudentAction} className="grid gap-3">
+                      <form action={updateStudentAction} className="grid gap-3" data-mutation-form>
                         <input name="user_id" type="hidden" value={student.user_id} />
                         <Field label="Full name">
                           <Input name="full_name" defaultValue={student.profile?.full_name ?? ""} required />
@@ -98,7 +98,7 @@ export default async function UsersPage() {
                       </form>
                     </AdminDialog>
                     {student.profile?.is_active ? (
-                      <form action={deactivateStudentAction}>
+                      <form action={deactivateStudentAction} data-mutation-form>
                         <input name="user_id" type="hidden" value={student.user_id} />
                         <Button type="submit" variant="outline" size="sm">
                           Deactivate

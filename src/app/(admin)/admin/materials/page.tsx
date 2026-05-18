@@ -45,7 +45,7 @@ export default async function MaterialsPage() {
         description="Maintain private solution files, metadata, download permissions, and publishing status."
         actions={
           <AdminDialog title="Upload material" description="File replacement is intentionally deferred; this creates a new private file." trigger={<CreateButton>Upload material</CreateButton>}>
-            <form action={uploadMaterialAction} className="grid gap-3">
+            <form action={uploadMaterialAction} className="grid gap-3" data-mutation-form>
               {materialFields()}
               <Field label="File">
                 <Input name="file" type="file" required />
@@ -78,7 +78,7 @@ export default async function MaterialsPage() {
                 <TableCell><StatusBadge status={material.status} /></TableCell>
                 <TableCell className="text-right">
                   <AdminDialog title="Edit material metadata" trigger={<EditButton />}>
-                    <form action={updateMaterialAction} className="grid gap-3">
+                    <form action={updateMaterialAction} className="grid gap-3" data-mutation-form>
                       {materialFields(material)}
                       <Button type="submit">Save changes</Button>
                     </form>

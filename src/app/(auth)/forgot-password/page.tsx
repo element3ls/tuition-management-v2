@@ -19,7 +19,7 @@ export default async function ForgotPasswordPage({
           <CardTitle>Forgot password</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={forgotPasswordAction} className="space-y-4">
+          <form action={forgotPasswordAction} className="space-y-4" data-mutation-form>
             {params.error ? <Alert className="border-destructive text-destructive">{params.error}</Alert> : null}
             {params.success ? <Alert>{params.success}</Alert> : null}
             <div className="space-y-2">

@@ -28,7 +28,7 @@ export default async function GroupsPage() {
         actions={
           <>
             <AdminDialog title="Add student to group" trigger={<Button type="button" variant="outline">Add student</Button>}>
-              <form action={addStudentToGroupAction} className="grid gap-3">
+              <form action={addStudentToGroupAction} className="grid gap-3" data-mutation-form>
                 <Field label="Student">
                   <Select name="student_id" required>
                     {data.studentProfiles.map((student) => {
@@ -60,7 +60,7 @@ export default async function GroupsPage() {
               </form>
             </AdminDialog>
             <AdminDialog title="Create group" trigger={<CreateButton>New group</CreateButton>}>
-              <form action={createGroupAction} className="grid gap-3">
+              <form action={createGroupAction} className="grid gap-3" data-mutation-form>
                 <Field label="Group name">
                   <Input name="name" required />
                 </Field>
@@ -109,7 +109,7 @@ export default async function GroupsPage() {
                   <TableCell>
                     <div className="flex justify-end gap-2">
                       <AdminDialog title="Edit group" trigger={<EditButton />}>
-                        <form action={updateGroupAction} className="grid gap-3">
+                        <form action={updateGroupAction} className="grid gap-3" data-mutation-form>
                           <input name="group_id" type="hidden" value={group.id} />
                           <Field label="Group name">
                             <Input name="name" defaultValue={group.name} required />
@@ -129,7 +129,7 @@ export default async function GroupsPage() {
                             return (
                               <div key={membership.id} className="rounded-md border border-border/70 p-3">
                                 <p className="mb-2 text-sm font-medium">{profile?.full_name ?? membership.student_id}</p>
-                                <form action={updateMembershipAction} className="grid gap-2">
+                                <form action={updateMembershipAction} className="grid gap-2" data-mutation-form>
                                   <input name="membership_id" type="hidden" value={membership.id} />
                                   <Field label="Status">
                                     <Select name="status" defaultValue={membership.status}>
@@ -145,7 +145,7 @@ export default async function GroupsPage() {
                                   </Field>
                                   <Button type="submit" size="sm">Save</Button>
                                 </form>
-                                <form action={removeStudentFromGroupAction} className="mt-2">
+                                <form action={removeStudentFromGroupAction} className="mt-2" data-mutation-form>
                                   <input name="group_id" type="hidden" value={group.id} />
                                   <input name="student_id" type="hidden" value={membership.student_id} />
                                   <Button type="submit" variant="outline" size="sm">Remove</Button>

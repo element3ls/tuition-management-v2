@@ -18,7 +18,7 @@ export default async function ResetPasswordPage({
           <CardTitle>Reset password</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={resetPasswordAction} className="space-y-4">
+          <form action={resetPasswordAction} className="space-y-4" data-mutation-form>
             {params.error ? <Alert className="border-destructive text-destructive">{params.error}</Alert> : null}
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="password">

@@ -486,6 +486,33 @@ export async function setContentStatusAction(formData: FormData) {
   redirect("/admin/content?success=Content%20status%20updated");
 }
 
+export async function archiveContentAction(formData: FormData) {
+  const { user } = await requireAdminAccess();
+  const resourceType = z.enum(["year", "subject", "chapter", "question"]).parse(textValue(formData, "resource_type"));
+  const resourceId = z.string().uuid().parse(textValue(formData, "resource_id"));
+  const table =
+    resourceType === "year" ? "years" : resourceType === "subject" ? "subjects" : resourceType === "chapter" ? "chapters" : "questions";
+
+  if (isDemoMode()) await demoRedirect("/admin/content");
+  ensureSupabaseReady();
+
+  const supabase = createAdminClient();
+  const { data: beforeData } = await supabase.from(table).select("*").eq("id", resourceId).single();
+  const payload = { status: "archived" };
+  const { error } = await supabase.from(table).update(payload).eq("id", resourceId);
+  if (error) throw new Error(error.message);
+  await logAudit({
+    actorId: user.id,
+    action: "content_updated",
+    resourceType,
+    resourceId,
+    beforeData,
+    afterData: payload
+  });
+  revalidatePath("/admin/content");
+  redirect("/admin/content?success=Content%20archived");
+}
+
 export async function updateContentAction(formData: FormData) {
   const { user } = await requireAdminAccess();
   const resourceType = z.enum(["year", "subject", "chapter", "question"]).parse(textValue(formData, "resource_type"));
