@@ -1,3 +1,4 @@
+import { BookOpen, CircleHelp, Layers, ListTree } from "lucide-react";
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge, statusOptions } from "@/components/admin/admin-ui";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button } from "@/components/ui/button";
@@ -12,10 +13,226 @@ import {
   createYearAction,
   updateContentAction
 } from "@/features/admin/actions";
+import { cn } from "@/lib/utils";
 import { getAppData } from "@/server/data/app-data";
+import type { Chapter, Question, Subject, Year } from "@/types/domain";
+
+type ContentTreeRow =
+  | {
+      kind: "year";
+      item: Year;
+      level: 0;
+      context: string;
+      preview: string;
+    }
+  | {
+      kind: "subject";
+      item: Subject;
+      level: 1;
+      context: string;
+      preview: string;
+    }
+  | {
+      kind: "chapter";
+      item: Chapter;
+      level: 2;
+      context: string;
+      preview: string;
+    }
+  | {
+      kind: "question";
+      item: Question;
+      level: 3;
+      context: string;
+      preview: string;
+    };
+
+const rowMeta = {
+  year: { icon: Layers, label: "Year", tone: "bg-primary/10 text-primary ring-primary/15" },
+  subject: { icon: BookOpen, label: "Subject", tone: "bg-sky-50 text-sky-700 ring-sky-600/20" },
+  chapter: { icon: ListTree, label: "Chapter", tone: "bg-amber-50 text-amber-700 ring-amber-600/20" },
+  question: { icon: CircleHelp, label: "Question", tone: "bg-violet-50 text-violet-700 ring-violet-600/20" }
+} as const;
+
+function childCountLabel(parts: Array<[number, string]>) {
+  return parts
+    .filter(([count]) => count > 0)
+    .map(([count, label]) => `${count} ${label}${count === 1 ? "" : "s"}`)
+    .join(" · ");
+}
+
+function ContentTreeRow({
+  row,
+  editDialog
+}: {
+  row: ContentTreeRow;
+  editDialog: React.ReactNode;
+}) {
+  const meta = rowMeta[row.kind];
+  const Icon = meta.icon;
+
+  return (
+    <TableRow className={cn(row.kind === "year" && "bg-muted/35 hover:bg-muted/55")}>
+      <TableCell className="min-w-[420px] whitespace-normal py-3">
+        <div className="flex items-start gap-3" style={{ paddingLeft: `${row.level * 30}px` }}>
+          <span className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md ring-1", meta.tone)}>
+            <Icon className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{meta.label}</span>
+              <span className="font-semibold text-foreground">{"name" in row.item ? row.item.name : row.item.title}</span>
+            </div>
+            <p className="max-w-2xl text-xs leading-5 text-muted-foreground">{row.preview}</p>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="min-w-[220px] whitespace-normal">
+        <span className="text-sm text-foreground">{row.context}</span>
+      </TableCell>
+      <TableCell className="w-[88px] text-center tabular-nums">{row.item.sort_order}</TableCell>
+      <TableCell className="w-[130px]">
+        <StatusBadge status={row.item.status} />
+      </TableCell>
+      <TableCell className="w-[110px] text-right">{editDialog}</TableCell>
+    </TableRow>
+  );
+}
 
 export default async function ContentPage() {
   const data = await getAppData();
+  const contentRows: ContentTreeRow[] = data.years.flatMap((year) => {
+    const yearSubjects = data.subjects.filter((subject) => subject.year_id === year.id);
+    const yearChapters = yearSubjects.flatMap((subject) => data.chapters.filter((chapter) => chapter.subject_id === subject.id));
+    const yearQuestions = yearChapters.flatMap((chapter) => data.questions.filter((question) => question.chapter_id === chapter.id));
+    const rows: ContentTreeRow[] = [
+      {
+        kind: "year",
+        item: year,
+        level: 0,
+        context: childCountLabel([
+          [yearSubjects.length, "subject"],
+          [yearChapters.length, "chapter"],
+          [yearQuestions.length, "question"]
+        ]) || "No child content",
+        preview: year.description ?? "No description"
+      }
+    ];
+
+    for (const subject of yearSubjects) {
+      const subjectChapters = data.chapters.filter((chapter) => chapter.subject_id === subject.id);
+      const subjectQuestions = subjectChapters.flatMap((chapter) => data.questions.filter((question) => question.chapter_id === chapter.id));
+      rows.push({
+        kind: "subject",
+        item: subject,
+        level: 1,
+        context: `Under ${year.name} · ${childCountLabel([
+          [subjectChapters.length, "chapter"],
+          [subjectQuestions.length, "question"]
+        ]) || "No child content"}`,
+        preview: subject.description ?? "No description"
+      });
+
+      for (const chapter of subjectChapters) {
+        const chapterQuestions = data.questions.filter((question) => question.chapter_id === chapter.id);
+        rows.push({
+          kind: "chapter",
+          item: chapter,
+          level: 2,
+          context: `Under ${subject.name} · ${childCountLabel([[chapterQuestions.length, "question"]]) || "No questions"}`,
+          preview: chapter.description ?? "No description"
+        });
+
+        for (const question of chapterQuestions) {
+          rows.push({
+            kind: "question",
+            item: question,
+            level: 3,
+            context: `Under ${chapter.title}`,
+            preview: question.question_text || question.description || "No question text"
+          });
+        }
+      }
+    }
+
+    return rows;
+  });
+
+  const editDialog = (row: ContentTreeRow) => {
+    if (row.kind === "year") {
+      const year = row.item;
+      return (
+        <AdminDialog title="Edit year" trigger={<EditButton />}>
+          <form action={updateContentAction} className="grid gap-3">
+            <input name="resource_type" type="hidden" value="year" />
+            <input name="resource_id" type="hidden" value={year.id} />
+            <Field label="Name"><Input name="name" defaultValue={year.name} required /></Field>
+            <Field label="Description"><Input name="description" defaultValue={year.description ?? ""} /></Field>
+            <Field label="Sort order"><Input name="sort_order" type="number" defaultValue={year.sort_order} /></Field>
+            <Field label="Status"><Select name="status" defaultValue={year.status}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</Select></Field>
+            <CheckField name="is_ai_indexable" label="AI indexable" defaultChecked={year.is_ai_indexable} />
+            <Button type="submit">Save changes</Button>
+          </form>
+        </AdminDialog>
+      );
+    }
+
+    if (row.kind === "subject") {
+      const subject = row.item;
+      return (
+        <AdminDialog title="Edit subject" trigger={<EditButton />}>
+          <form action={updateContentAction} className="grid gap-3">
+            <input name="resource_type" type="hidden" value="subject" />
+            <input name="resource_id" type="hidden" value={subject.id} />
+            <Field label="Year"><Select name="year_id" defaultValue={subject.year_id}>{data.years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}</Select></Field>
+            <Field label="Name"><Input name="name" defaultValue={subject.name} required /></Field>
+            <Field label="Description"><Input name="description" defaultValue={subject.description ?? ""} /></Field>
+            <Field label="Sort order"><Input name="sort_order" type="number" defaultValue={subject.sort_order} /></Field>
+            <Field label="Status"><Select name="status" defaultValue={subject.status}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</Select></Field>
+            <CheckField name="is_ai_indexable" label="AI indexable" defaultChecked={subject.is_ai_indexable} />
+            <Button type="submit">Save changes</Button>
+          </form>
+        </AdminDialog>
+      );
+    }
+
+    if (row.kind === "chapter") {
+      const chapter = row.item;
+      return (
+        <AdminDialog title="Edit chapter" trigger={<EditButton />}>
+          <form action={updateContentAction} className="grid gap-3">
+            <input name="resource_type" type="hidden" value="chapter" />
+            <input name="resource_id" type="hidden" value={chapter.id} />
+            <Field label="Subject"><Select name="subject_id" defaultValue={chapter.subject_id}>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</Select></Field>
+            <Field label="Title"><Input name="title" defaultValue={chapter.title} required /></Field>
+            <Field label="Description"><Input name="description" defaultValue={chapter.description ?? ""} /></Field>
+            <Field label="Sort order"><Input name="sort_order" type="number" defaultValue={chapter.sort_order} /></Field>
+            <Field label="Status"><Select name="status" defaultValue={chapter.status}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</Select></Field>
+            <CheckField name="is_ai_indexable" label="AI indexable" defaultChecked={chapter.is_ai_indexable} />
+            <Button type="submit">Save changes</Button>
+          </form>
+        </AdminDialog>
+      );
+    }
+
+    const question = row.item;
+    return (
+      <AdminDialog title="Edit question" trigger={<EditButton />}>
+        <form action={updateContentAction} className="grid gap-3">
+          <input name="resource_type" type="hidden" value="question" />
+          <input name="resource_id" type="hidden" value={question.id} />
+          <Field label="Chapter"><Select name="chapter_id" defaultValue={question.chapter_id}>{data.chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}</Select></Field>
+          <Field label="Title"><Input name="title" defaultValue={question.title} required /></Field>
+          <Field label="Question text"><Textarea name="question_text" defaultValue={question.question_text} required /></Field>
+          <Field label="Description"><Input name="description" defaultValue={question.description ?? ""} /></Field>
+          <Field label="Sort order"><Input name="sort_order" type="number" defaultValue={question.sort_order} /></Field>
+          <Field label="Status"><Select name="status" defaultValue={question.status}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</Select></Field>
+          <CheckField name="is_ai_indexable" label="AI indexable" defaultChecked={question.is_ai_indexable} />
+          <Button type="submit">Save changes</Button>
+        </form>
+      </AdminDialog>
+    );
+  };
 
   return (
     <>
@@ -71,167 +288,29 @@ export default async function ContentPage() {
           </div>
         }
       />
-      <div className="grid gap-5">
-        <section className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Year</TableHead>
-                <TableHead>Subjects</TableHead>
-                <TableHead>Sort</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[110px] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.years.length === 0 ? <EmptyTable colSpan={5} label="No years yet." /> : null}
-              {data.years.map((year) => (
-                <TableRow key={year.id}>
-                  <TableCell><div className="font-medium">{year.name}</div><div className="text-xs text-muted-foreground">{year.description ?? "No description"}</div></TableCell>
-                  <TableCell>{data.subjects.filter((subject) => subject.year_id === year.id).length}</TableCell>
-                  <TableCell>{year.sort_order}</TableCell>
-                  <TableCell><StatusBadge status={year.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <AdminDialog title="Edit year" trigger={<EditButton />}>
-                      <form action={updateContentAction} className="grid gap-3">
-                        <input name="resource_type" type="hidden" value="year" />
-                        <input name="resource_id" type="hidden" value={year.id} />
-                        <Field label="Name"><Input name="name" defaultValue={year.name} required /></Field>
-                        <Field label="Description"><Input name="description" defaultValue={year.description ?? ""} /></Field>
-                        <Field label="Sort order"><Input name="sort_order" type="number" defaultValue={year.sort_order} /></Field>
-                        <Field label="Status"><Select name="status" defaultValue={year.status}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</Select></Field>
-                        <CheckField name="is_ai_indexable" label="AI indexable" defaultChecked={year.is_ai_indexable} />
-                        <Button type="submit">Save changes</Button>
-                      </form>
-                    </AdminDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
-
-        <section className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Subject</TableHead>
-                <TableHead>Year</TableHead>
-                <TableHead>Chapters</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[110px] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.subjects.length === 0 ? <EmptyTable colSpan={5} label="No subjects yet." /> : null}
-              {data.subjects.map((subject) => (
-                <TableRow key={subject.id}>
-                  <TableCell><div className="font-medium">{subject.name}</div><div className="text-xs text-muted-foreground">{subject.description ?? "No description"}</div></TableCell>
-                  <TableCell>{data.years.find((year) => year.id === subject.year_id)?.name}</TableCell>
-                  <TableCell>{data.chapters.filter((chapter) => chapter.subject_id === subject.id).length}</TableCell>
-                  <TableCell><StatusBadge status={subject.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <AdminDialog title="Edit subject" trigger={<EditButton />}>
-                      <form action={updateContentAction} className="grid gap-3">
-                        <input name="resource_type" type="hidden" value="subject" />
-                        <input name="resource_id" type="hidden" value={subject.id} />
-                        <Field label="Year"><Select name="year_id" defaultValue={subject.year_id}>{data.years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}</Select></Field>
-                        <Field label="Name"><Input name="name" defaultValue={subject.name} required /></Field>
-                        <Field label="Description"><Input name="description" defaultValue={subject.description ?? ""} /></Field>
-                        <Field label="Sort order"><Input name="sort_order" type="number" defaultValue={subject.sort_order} /></Field>
-                        <Field label="Status"><Select name="status" defaultValue={subject.status}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</Select></Field>
-                        <CheckField name="is_ai_indexable" label="AI indexable" defaultChecked={subject.is_ai_indexable} />
-                        <Button type="submit">Save changes</Button>
-                      </form>
-                    </AdminDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
-
-        <section className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Chapter</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Questions</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[110px] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.chapters.length === 0 ? <EmptyTable colSpan={5} label="No chapters yet." /> : null}
-              {data.chapters.map((chapter) => (
-                <TableRow key={chapter.id}>
-                  <TableCell><div className="font-medium">{chapter.title}</div><div className="text-xs text-muted-foreground">{chapter.description ?? "No description"}</div></TableCell>
-                  <TableCell>{data.subjects.find((subject) => subject.id === chapter.subject_id)?.name}</TableCell>
-                  <TableCell>{data.questions.filter((question) => question.chapter_id === chapter.id).length}</TableCell>
-                  <TableCell><StatusBadge status={chapter.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <AdminDialog title="Edit chapter" trigger={<EditButton />}>
-                      <form action={updateContentAction} className="grid gap-3">
-                        <input name="resource_type" type="hidden" value="chapter" />
-                        <input name="resource_id" type="hidden" value={chapter.id} />
-                        <Field label="Subject"><Select name="subject_id" defaultValue={chapter.subject_id}>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</Select></Field>
-                        <Field label="Title"><Input name="title" defaultValue={chapter.title} required /></Field>
-                        <Field label="Description"><Input name="description" defaultValue={chapter.description ?? ""} /></Field>
-                        <Field label="Sort order"><Input name="sort_order" type="number" defaultValue={chapter.sort_order} /></Field>
-                        <Field label="Status"><Select name="status" defaultValue={chapter.status}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</Select></Field>
-                        <CheckField name="is_ai_indexable" label="AI indexable" defaultChecked={chapter.is_ai_indexable} />
-                        <Button type="submit">Save changes</Button>
-                      </form>
-                    </AdminDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
-
-        <section className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Question</TableHead>
-                <TableHead>Chapter</TableHead>
-                <TableHead>Sort</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[110px] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.questions.length === 0 ? <EmptyTable colSpan={5} label="No questions yet." /> : null}
-              {data.questions.map((question) => (
-                <TableRow key={question.id}>
-                  <TableCell><div className="font-medium">{question.title}</div><div className="max-w-md truncate text-xs text-muted-foreground">{question.question_text}</div></TableCell>
-                  <TableCell>{data.chapters.find((chapter) => chapter.id === question.chapter_id)?.title}</TableCell>
-                  <TableCell>{question.sort_order}</TableCell>
-                  <TableCell><StatusBadge status={question.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <AdminDialog title="Edit question" trigger={<EditButton />}>
-                      <form action={updateContentAction} className="grid gap-3">
-                        <input name="resource_type" type="hidden" value="question" />
-                        <input name="resource_id" type="hidden" value={question.id} />
-                        <Field label="Chapter"><Select name="chapter_id" defaultValue={question.chapter_id}>{data.chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}</Select></Field>
-                        <Field label="Title"><Input name="title" defaultValue={question.title} required /></Field>
-                        <Field label="Question text"><Textarea name="question_text" defaultValue={question.question_text} required /></Field>
-                        <Field label="Description"><Input name="description" defaultValue={question.description ?? ""} /></Field>
-                        <Field label="Sort order"><Input name="sort_order" type="number" defaultValue={question.sort_order} /></Field>
-                        <Field label="Status"><Select name="status" defaultValue={question.status}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</Select></Field>
-                        <CheckField name="is_ai_indexable" label="AI indexable" defaultChecked={question.is_ai_indexable} />
-                        <Button type="submit">Save changes</Button>
-                      </form>
-                    </AdminDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
-      </div>
+      <section className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
+        <div className="border-b border-border/70 bg-muted/25 px-4 py-3">
+          <h2 className="text-sm font-semibold text-foreground">Content hierarchy</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Expanded view of every year, subject, chapter, and question.</p>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-background/60">
+              <TableHead className="min-w-[420px] px-4">Content</TableHead>
+              <TableHead className="min-w-[220px]">Parent / Context</TableHead>
+              <TableHead className="w-[88px] text-center">Sort</TableHead>
+              <TableHead className="w-[130px]">Status</TableHead>
+              <TableHead className="w-[110px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {contentRows.length === 0 ? <EmptyTable colSpan={5} label="No syllabus content yet. Create a year to start the hierarchy." /> : null}
+            {contentRows.map((row) => (
+              <ContentTreeRow key={`${row.kind}-${row.item.id}`} row={row} editDialog={editDialog(row)} />
+            ))}
+          </TableBody>
+        </Table>
+      </section>
     </>
   );
 }
