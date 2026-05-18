@@ -7,6 +7,7 @@ import { logActivityEvent } from "@/lib/activity/log";
 import { canAccessResource } from "@/lib/permissions";
 import { bySortOrderThenName } from "@/lib/sorting";
 import { getAppData } from "@/server/data/app-data";
+import { StudentVideoPlayer } from "@/app/(student)/recordings/[recordingId]/student-video-player";
 
 export default async function RecordingPage({ params }: { params: Promise<{ recordingId: string }> }) {
   const { recordingId } = await params;
@@ -43,13 +44,7 @@ export default async function RecordingPage({ params }: { params: Promise<{ reco
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <Card>
           <CardContent className="p-0">
-            <iframe
-              className="aspect-video w-full rounded-md"
-              src={`https://www.youtube.com/embed/${recording.youtube_video_id}`}
-              title={recording.title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+            <StudentVideoPlayer videoId={recording.youtube_video_id} title={recording.title} />
           </CardContent>
         </Card>
         <Card>
