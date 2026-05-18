@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { BookOpen, ChevronRight, CircleHelp, Layers, ListTree, Archive } from "lucide-react";
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge, statusOptions } from "@/components/admin/admin-ui";
 import { PageHeading } from "@/components/layout/page-heading";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -166,10 +166,10 @@ function ArchiveDialog({ row }: { row: ContentTreeRow }) {
       title={`Archive ${meta.label.toLowerCase()}`}
       description="This is a soft delete. Child statuses stay unchanged, but archived ancestors hide their descendants from students."
       trigger={
-        <Button type="button" variant="destructive" size="sm">
+        <button type="button" data-slot="button" className={buttonVariants({ variant: "destructive", size: "sm" })}>
           <Archive className="size-3.5" />
           Archive
-        </Button>
+        </button>
       }
     >
       <form action={archiveContentAction} className="grid gap-4" data-mutation-form>

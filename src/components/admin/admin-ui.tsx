@@ -2,7 +2,7 @@ import type React from "react";
 import type { ReactElement } from "react";
 import { MoreHorizontal, Pencil, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -80,21 +80,31 @@ export function AdminDialog({
   );
 }
 
-export function CreateButton({ children }: { children: React.ReactNode }) {
+export function CreateButton({ children, className, type = "button", ...props }: React.ComponentProps<"button">) {
   return (
-    <Button type="button">
+    <button
+      type={type}
+      data-slot="button"
+      className={cn(buttonVariants({ variant: "default", size: "default" }), className)}
+      {...props}
+    >
       <Plus className="size-4" />
       {children}
-    </Button>
+    </button>
   );
 }
 
-export function EditButton({ children = "Edit" }: { children?: React.ReactNode }) {
+export function EditButton({ children = "Edit", className, type = "button", ...props }: React.ComponentProps<"button">) {
   return (
-    <Button type="button" variant="outline" size="sm">
+    <button
+      type={type}
+      data-slot="button"
+      className={cn(buttonVariants({ variant: "outline", size: "sm" }), className)}
+      {...props}
+    >
       <Pencil className="size-3.5" />
       {children}
-    </Button>
+    </button>
   );
 }
 

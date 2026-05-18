@@ -1,6 +1,6 @@
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge } from "@/components/admin/admin-ui";
 import { PageHeading } from "@/components/layout/page-heading";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -27,7 +27,10 @@ export default async function GroupsPage() {
         description="Manage access cohorts, student memberships, and membership windows."
         actions={
           <>
-            <AdminDialog title="Add student to group" trigger={<Button type="button" variant="outline">Add student</Button>}>
+            <AdminDialog
+              title="Add student to group"
+              trigger={<button type="button" data-slot="button" className={buttonVariants({ variant: "outline" })}>Add student</button>}
+            >
               <form action={addStudentToGroupAction} className="grid gap-3" data-mutation-form>
                 <Field label="Student">
                   <Select name="student_id" required>
@@ -121,7 +124,10 @@ export default async function GroupsPage() {
                           <Button type="submit">Save changes</Button>
                         </form>
                       </AdminDialog>
-                      <AdminDialog title="Edit memberships" trigger={<Button type="button" variant="outline" size="sm">Members</Button>}>
+                      <AdminDialog
+                        title="Edit memberships"
+                        trigger={<button type="button" data-slot="button" className={buttonVariants({ variant: "outline", size: "sm" })}>Members</button>}
+                      >
                         <div className="grid gap-3">
                           {memberships.length === 0 ? <p className="text-sm text-muted-foreground">No memberships in this group.</p> : null}
                           {memberships.map((membership) => {
