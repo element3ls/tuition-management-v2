@@ -4,12 +4,13 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cloneDemoData } from "@/lib/demo-data";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
-import { demoUserCookie } from "@/lib/auth/session";
+import { demoUserCookie, requireAuth } from "@/lib/auth/session";
 import { hasAdminRole } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "@/features/auth/validation";
+import { forgotPasswordSchema, loginSchema, ownPasswordSchema, ownProfileSchema, resetPasswordSchema } from "@/features/auth/validation";
 import { logActivityEvent } from "@/lib/activity/log";
+import { logAudit } from "@/lib/audit/log";
 
 export async function loginAction(formData: FormData) {
   const parsed = loginSchema.safeParse(Object.fromEntries(formData));
@@ -119,4 +120,75 @@ export async function resetPasswordAction(formData: FormData) {
   }
 
   redirect("/login?success=Password%20updated");
+}
+
+export async function updateOwnProfileAction(formData: FormData) {
+  const user = await requireAuth();
+  const parsed = ownProfileSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    redirect("/account?error=Enter%20a%20valid%20name%20and%20email");
+  }
+
+  if (isDemoMode()) {
+    redirect("/account?success=Demo%20mode%20validated%20the%20form.%20Connect%20Supabase%20to%20persist%20changes.");
+  }
+
+  if (!isSupabaseConfigured()) {
+    redirect("/account?error=Supabase%20is%20not%20configured");
+  }
+
+  const admin = createAdminClient();
+  const { data: beforeData } = await admin.from("profiles").select("*").eq("id", user.id).single();
+  const authUpdate = await admin.auth.admin.updateUserById(user.id, {
+    email: parsed.data.email,
+    user_metadata: { full_name: parsed.data.full_name }
+  });
+  if (authUpdate.error) throw new Error(authUpdate.error.message);
+
+  const profileUpdate = await admin
+    .from("profiles")
+    .update({ email: parsed.data.email, full_name: parsed.data.full_name })
+    .eq("id", user.id);
+  if (profileUpdate.error) throw new Error(profileUpdate.error.message);
+
+  await logAudit({
+    actorId: user.id,
+    action: "user_updated",
+    resourceType: "profile",
+    resourceId: user.id,
+    beforeData,
+    afterData: { email: parsed.data.email, full_name: parsed.data.full_name }
+  });
+  redirect("/account?success=Profile%20updated");
+}
+
+export async function updateOwnPasswordAction(formData: FormData) {
+  const user = await requireAuth();
+  const parsed = ownPasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    redirect("/account?error=Passwords%20must%20match%20and%20be%20at%20least%208%20characters");
+  }
+
+  if (isDemoMode()) {
+    redirect("/account?success=Demo%20mode%20validated%20the%20form.%20Connect%20Supabase%20to%20persist%20changes.");
+  }
+
+  if (!isSupabaseConfigured()) {
+    redirect("/account?error=Supabase%20is%20not%20configured");
+  }
+
+  const admin = createAdminClient();
+  const authUpdate = await admin.auth.admin.updateUserById(user.id, {
+    password: parsed.data.password
+  });
+  if (authUpdate.error) throw new Error(authUpdate.error.message);
+
+  await logAudit({
+    actorId: user.id,
+    action: "user_updated",
+    resourceType: "profile",
+    resourceId: user.id,
+    afterData: { password_updated: true }
+  });
+  redirect("/account?success=Password%20updated");
 }
