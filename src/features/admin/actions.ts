@@ -347,23 +347,30 @@ export async function createAccessGrantAction(formData: FormData) {
       grantee_id: z.string().uuid(),
       resource_type: resourceTypeSchema,
       resource_id: z.string().uuid(),
-      permission: z.enum(["view", "download"]),
-      starts_at: z.string().optional(),
-      expires_at: z.string().optional()
+      starts_at: z.string().min(1),
+      expires_at: z.string().min(1)
     })
     .parse(Object.fromEntries(formData));
+  const permissions = z.array(z.enum(["view", "download"])).min(1).parse(formData.getAll("permission"));
   if (isDemoMode()) await demoRedirect("/admin/access");
   ensureSupabaseReady();
   const supabase = createAdminClient();
-  const payload = {
+  const basePayload = {
     ...parsed,
-    starts_at: parsed.starts_at || null,
-    expires_at: parsed.expires_at || null,
+    starts_at: datetimeValue(formData, "starts_at"),
+    expires_at: datetimeValue(formData, "expires_at"),
     granted_by: user.id
   };
-  const { data, error } = await supabase.from("access_grants").insert(payload).select("id").single();
+  const payload = permissions.map((permission) => ({ ...basePayload, permission }));
+  const { data, error } = await supabase.from("access_grants").insert(payload).select("id");
   if (error) throw new Error(error.message);
-  await logAudit({ actorId: user.id, action: "access_granted", resourceType: parsed.resource_type, resourceId: data.id, afterData: payload });
+  await logAudit({
+    actorId: user.id,
+    action: "access_granted",
+    resourceType: parsed.resource_type,
+    resourceId: data?.[0]?.id ?? null,
+    afterData: { ...basePayload, permissions }
+  });
   revalidatePath("/admin/access");
   redirect("/admin/access?success=Access%20granted");
 }
