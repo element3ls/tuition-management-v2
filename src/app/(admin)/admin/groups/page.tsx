@@ -4,6 +4,8 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import { UserPlus } from "lucide-react";
 import {
   addStudentToGroupAction,
   createGroupAction,
@@ -29,7 +31,19 @@ export default async function GroupsPage() {
           <>
             <AdminDialog
               title="Add student to group"
-              trigger={<button type="button" data-slot="button" className={buttonVariants({ variant: "outline" })}>Add student</button>}
+              trigger={
+                <button
+                  type="button"
+                  data-slot="button"
+                  className={cn(
+                    buttonVariants({ variant: "outline" }),
+                    "border-primary/50 bg-primary/10 text-primary shadow-sm hover:border-primary/70 hover:bg-primary/15 hover:text-primary"
+                  )}
+                >
+                  <UserPlus className="size-4" />
+                  Add student
+                </button>
+              }
             >
               <form action={addStudentToGroupAction} className="grid gap-3" data-mutation-form>
                 <Field label="Student">
