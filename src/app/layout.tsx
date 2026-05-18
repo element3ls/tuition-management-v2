@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body>
         {children}
-        <SavingOverlayProvider />
+        <Suspense fallback={null}>
+          <SavingOverlayProvider />
+        </Suspense>
       </body>
     </html>
   );
