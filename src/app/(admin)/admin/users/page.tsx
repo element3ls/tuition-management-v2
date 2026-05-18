@@ -1,10 +1,10 @@
+import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge } from "@/components/admin/admin-ui";
 import { PageHeading } from "@/components/layout/page-heading";
-import { createStudentAction, deactivateStudentAction } from "@/features/admin/actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { createStudentAction, deactivateStudentAction, updateStudentAction } from "@/features/admin/actions";
 import { getAppData } from "@/server/data/app-data";
 
 export default async function UsersPage() {
@@ -20,63 +20,97 @@ export default async function UsersPage() {
 
   return (
     <>
-      <PageHeading title="Students" description="Create, edit, deactivate, and group students." />
-      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create student</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={createStudentAction} className="grid gap-3">
-            <Input name="full_name" placeholder="Full name" required />
-            <Input name="email" placeholder="Email" type="email" required />
-            <Input name="password" placeholder="Temporary password" type="password" minLength={8} required />
-            <Input name="guardian_name" placeholder="Guardian name" />
-            <Input name="phone" placeholder="Phone" />
-            <Button type="submit">Create student</Button>
-          </form>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Student records</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Groups</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map((student) => (
-                <TableRow key={student.user_id}>
-                  <TableCell>{student.profile?.full_name ?? "Unknown"}</TableCell>
-                  <TableCell>{student.profile?.email}</TableCell>
-                  <TableCell>{student.groups.join(", ") || "None"}</TableCell>
-                  <TableCell>
-                    <Badge>{student.profile?.is_active ? "active" : "inactive"}</Badge>
-                  </TableCell>
-                  <TableCell>
+      <PageHeading
+        title="Students"
+        description="Maintain student profiles, login emails, guardians, and account status."
+        actions={
+          <AdminDialog title="Create student" description="Create login access and the student profile." trigger={<CreateButton>New student</CreateButton>}>
+            <form action={createStudentAction} className="grid gap-3">
+              <Field label="Full name">
+                <Input name="full_name" required />
+              </Field>
+              <Field label="Email">
+                <Input name="email" type="email" required />
+              </Field>
+              <Field label="Temporary password">
+                <Input name="password" type="password" minLength={8} required />
+              </Field>
+              <Field label="Guardian name">
+                <Input name="guardian_name" />
+              </Field>
+              <Field label="Phone">
+                <Input name="phone" />
+              </Field>
+              <Field label="Notes">
+                <Textarea name="notes" />
+              </Field>
+              <Button type="submit">Create student</Button>
+            </form>
+          </AdminDialog>
+        }
+      />
+      <div className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Groups</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-[180px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {students.length === 0 ? <EmptyTable colSpan={5} label="No students yet." /> : null}
+            {students.map((student) => (
+              <TableRow key={student.user_id}>
+                <TableCell>
+                  <div className="font-medium">{student.profile?.full_name ?? "Unknown"}</div>
+                  <div className="text-xs text-muted-foreground">{student.guardian_name ?? "No guardian"}</div>
+                </TableCell>
+                <TableCell>{student.profile?.email}</TableCell>
+                <TableCell>{student.groups.join(", ") || "None"}</TableCell>
+                <TableCell>
+                  <StatusBadge status={student.profile?.is_active} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-2">
+                    <AdminDialog title="Edit student" trigger={<EditButton />}>
+                      <form action={updateStudentAction} className="grid gap-3">
+                        <input name="user_id" type="hidden" value={student.user_id} />
+                        <Field label="Full name">
+                          <Input name="full_name" defaultValue={student.profile?.full_name ?? ""} required />
+                        </Field>
+                        <Field label="Email">
+                          <Input name="email" type="email" defaultValue={student.profile?.email ?? ""} required />
+                        </Field>
+                        <Field label="Guardian name">
+                          <Input name="guardian_name" defaultValue={student.guardian_name ?? ""} />
+                        </Field>
+                        <Field label="Phone">
+                          <Input name="phone" defaultValue={student.phone ?? ""} />
+                        </Field>
+                        <Field label="Notes">
+                          <Textarea name="notes" defaultValue={student.notes ?? ""} />
+                        </Field>
+                        <CheckField name="is_active" label="Active account" defaultChecked={student.profile?.is_active ?? false} />
+                        <Button type="submit">Save changes</Button>
+                      </form>
+                    </AdminDialog>
                     {student.profile?.is_active ? (
                       <form action={deactivateStudentAction}>
                         <input name="user_id" type="hidden" value={student.user_id} />
-                        <Button type="submit" variant="outline">
+                        <Button type="submit" variant="outline" size="sm">
                           Deactivate
                         </Button>
                       </form>
                     ) : null}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </>
   );

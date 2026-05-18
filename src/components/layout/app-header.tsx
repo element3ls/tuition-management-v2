@@ -1,18 +1,24 @@
 import Link from "next/link";
+import { GraduationCap } from "lucide-react";
 import { logoutAction } from "@/features/auth/actions";
 import { Button } from "@/components/ui/button";
 import type { Profile, RoleName } from "@/types/domain";
 
 export function AppHeader({ user, roles }: { user: Profile; roles: RoleName[] }) {
   return (
-    <header className="border-b bg-card">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-        <Link href="/dashboard" className="font-semibold">
-          Tuition Management
+    <header className="border-b border-border/70 bg-card/95 backdrop-blur">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <Link href="/dashboard" className="flex min-w-0 items-center gap-2 font-semibold">
+          <span className="rounded-lg bg-primary p-2 text-primary-foreground">
+            <GraduationCap className="size-4" />
+          </span>
+          <span className="min-w-0">Tuition Management</span>
         </Link>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-muted-foreground">{user.full_name}</span>
-          <span className="rounded-sm bg-muted px-2 py-1 text-xs">{roles.join(", ")}</span>
+        <div className="flex min-w-0 items-center gap-2 text-sm sm:gap-3">
+          <span className="hidden truncate text-muted-foreground sm:inline">{user.full_name}</span>
+          <span className="max-w-28 truncate rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground sm:max-w-none">
+            {roles.join(", ")}
+          </span>
           <form action={logoutAction}>
             <Button variant="outline" type="submit">
               Log out

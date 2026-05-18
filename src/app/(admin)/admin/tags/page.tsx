@@ -1,9 +1,9 @@
+import { AdminDialog, CreateButton, EditButton, EmptyTable, Field } from "@/components/admin/admin-ui";
 import { PageHeading } from "@/components/layout/page-heading";
-import { createTagAction } from "@/features/admin/actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { createTagAction, updateTagAction } from "@/features/admin/actions";
 import { getAppData } from "@/server/data/app-data";
 
 export default async function TagsPage() {
@@ -11,29 +11,53 @@ export default async function TagsPage() {
 
   return (
     <>
-      <PageHeading title="Tags" description="Tag content for keyword discovery and future AI metadata." />
-      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create tag</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={createTagAction} className="flex gap-2">
-            <Input name="name" placeholder="Tag name" required />
-            <Button type="submit">Create</Button>
-          </form>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Tags</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          {data.tags.map((tag) => (
-            <Badge key={tag.id}>{tag.name}</Badge>
-          ))}
-        </CardContent>
-      </Card>
+      <PageHeading
+        title="Tags"
+        description="Edit keyword labels and slugs for discovery and future AI metadata."
+        actions={
+          <AdminDialog title="Create tag" trigger={<CreateButton>New tag</CreateButton>}>
+            <form action={createTagAction} className="grid gap-3">
+              <Field label="Name">
+                <Input name="name" required />
+              </Field>
+              <Button type="submit">Create tag</Button>
+            </form>
+          </AdminDialog>
+        }
+      />
+      <div className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Slug</TableHead>
+              <TableHead className="w-[110px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.tags.length === 0 ? <EmptyTable colSpan={3} label="No tags yet." /> : null}
+            {data.tags.map((tag) => (
+              <TableRow key={tag.id}>
+                <TableCell className="font-medium">{tag.name}</TableCell>
+                <TableCell>{tag.slug}</TableCell>
+                <TableCell className="text-right">
+                  <AdminDialog title="Edit tag" trigger={<EditButton />}>
+                    <form action={updateTagAction} className="grid gap-3">
+                      <input name="tag_id" type="hidden" value={tag.id} />
+                      <Field label="Name">
+                        <Input name="name" defaultValue={tag.name} required />
+                      </Field>
+                      <Field label="Slug">
+                        <Input name="slug" defaultValue={tag.slug} required />
+                      </Field>
+                      <Button type="submit">Save changes</Button>
+                    </form>
+                  </AdminDialog>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </>
   );
