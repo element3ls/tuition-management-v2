@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Field } from "@/components/admin/admin-ui";
-import type { AppData, GranteeType, ResourceType } from "@/types/domain";
+import type { AppData, GranteeType, PermissionLevel, ResourceType } from "@/types/domain";
 
 type Option = {
   id: string;
@@ -25,6 +25,8 @@ const resourceTypes: Array<{ value: ResourceType; label: string }> = [
 export function AccessGrantForm({ data }: { data: AppData }) {
   const [granteeType, setGranteeType] = useState<GranteeType>("group");
   const [resourceType, setResourceType] = useState<ResourceType>("year");
+  const [selectedPermissions, setSelectedPermissions] = useState<PermissionLevel[]>(["view"]);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   const granteeOptions = useMemo<Option[]>(() => {
     if (granteeType === "group") {
@@ -46,8 +48,24 @@ export function AccessGrantForm({ data }: { data: AppData }) {
     return data.solutionMaterials.map((material) => ({ id: material.id, label: material.title }));
   }, [data.chapters, data.questions, data.recordings, data.solutionMaterials, data.subjects, data.years, resourceType]);
 
+  const togglePermission = (permission: PermissionLevel) => {
+    setPermissionError(null);
+    setSelectedPermissions((current) =>
+      current.includes(permission) ? current.filter((item) => item !== permission) : [...current, permission]
+    );
+  };
+
   return (
-    <form action={createAccessGrantAction} className="grid gap-3" data-mutation-form>
+    <form
+      action={createAccessGrantAction}
+      className="grid gap-3"
+      data-mutation-form
+      onSubmit={(event) => {
+        if (selectedPermissions.length > 0) return;
+        event.preventDefault();
+        setPermissionError("Select at least one permission.");
+      }}
+    >
       <Field label="Grantee type">
         <Select name="grantee_type" value={granteeType} onChange={(event) => setGranteeType(event.target.value as GranteeType)}>
           <option value="group">Group</option>
@@ -81,18 +99,25 @@ export function AccessGrantForm({ data }: { data: AppData }) {
           ))}
         </Select>
       </Field>
-      <Field label="Permissions">
-        <select
-          name="permission"
-          multiple
-          required
-          defaultValue={["view"]}
-          className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30"
-        >
-          <option value="view">View</option>
-          <option value="download">Download</option>
-        </select>
-      </Field>
+      <div className="grid gap-1.5 text-sm font-medium text-foreground">
+        <span>Permissions</span>
+        <div className="grid gap-2 rounded-md border border-border/70 bg-background/60 p-3">
+          {(["view", "download"] satisfies PermissionLevel[]).map((permission) => (
+            <label key={permission} className="flex items-center gap-2 text-sm font-medium capitalize text-foreground">
+              <input
+                name="permission"
+                type="checkbox"
+                value={permission}
+                checked={selectedPermissions.includes(permission)}
+                onChange={() => togglePermission(permission)}
+                className="size-4 accent-primary"
+              />
+              {permission}
+            </label>
+          ))}
+        </div>
+        {permissionError ? <p className="text-xs font-normal text-destructive">{permissionError}</p> : null}
+      </div>
       <Field label="Starts at">
         <Input name="starts_at" type="datetime-local" required />
       </Field>
