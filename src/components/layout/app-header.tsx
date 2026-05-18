@@ -19,7 +19,7 @@ export function AppHeader({ user, roles }: { user: Profile; roles: RoleName[] })
           <span className="max-w-28 truncate rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground sm:max-w-none">
             {roles.join(", ")}
           </span>
-          <form action={logoutAction} data-mutation-form>
+          <form action={logoutAction}>
             <Button variant="outline" type="submit">
               Log out
             </Button>
