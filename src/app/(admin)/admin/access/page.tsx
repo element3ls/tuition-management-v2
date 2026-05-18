@@ -8,6 +8,7 @@ import { AccessGrantForm } from "@/app/(admin)/admin/access/access-grant-form";
 
 export default async function AccessPage() {
   const data = await getAppData();
+  const formatWindowDate = (value: string | null, fallback: string) => (value ? new Date(value).toLocaleString() : fallback);
   const resourceName = (type: string, id: string) =>
     type === "year"
       ? data.years.find((item) => item.id === id)?.name
@@ -51,7 +52,12 @@ export default async function AccessPage() {
                 <TableCell>{grant.grantee_type === "group" ? data.groups.find((group) => group.id === grant.grantee_id)?.name : data.profiles.find((profile) => profile.id === grant.grantee_id)?.full_name}</TableCell>
                 <TableCell><div className="font-medium">{resourceName(grant.resource_type, grant.resource_id) ?? grant.resource_id}</div><div className="text-xs text-muted-foreground">{grant.resource_type}</div></TableCell>
                 <TableCell className="capitalize">{grant.permission}</TableCell>
-                <TableCell>{grant.starts_at ?? "now"} to {grant.expires_at ?? "no expiry"}</TableCell>
+                <TableCell>
+                  <div className="grid gap-1 text-sm">
+                    <span>{formatWindowDate(grant.starts_at, "now")}</span>
+                    <span className="text-xs text-muted-foreground">to {formatWindowDate(grant.expires_at, "no expiry")}</span>
+                  </div>
+                </TableCell>
                 <TableCell><StatusBadge status={grant.revoked_at ? "revoked" : "active"} /></TableCell>
                 <TableCell className="text-right">
                   {!grant.revoked_at ? (
