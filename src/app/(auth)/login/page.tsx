@@ -19,7 +19,7 @@ export default async function LoginPage({
           <CardTitle>Log in</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={loginAction} className="space-y-4" data-mutation-form>
+          <form action={loginAction} className="space-y-4">
             {params.error ? <Alert className="border-destructive text-destructive">{params.error}</Alert> : null}
             {params.success ? <Alert>{params.success}</Alert> : null}
             <div className="space-y-2">
