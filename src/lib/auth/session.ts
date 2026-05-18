@@ -90,6 +90,10 @@ export async function requireAdminAccess() {
   return requireRole(adminRoles);
 }
 
+export async function requireSuperAdminAccess() {
+  return requireRole(["super_admin"]);
+}
+
 export async function requireStudentAccess() {
   return requireRole(["student"]);
 }

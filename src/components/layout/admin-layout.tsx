@@ -8,7 +8,7 @@ export function AdminLayout({ children, user, roles }: { children: React.ReactNo
       <AppHeader user={user} roles={roles} />
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-4 md:grid-cols-[240px_1fr] md:gap-6 md:py-6">
         <aside className="h-fit rounded-lg border border-border/70 bg-card/90 p-3 shadow-sm md:sticky md:top-4">
-          <AdminNav />
+          <AdminNav roles={roles} />
         </aside>
         <main className="min-w-0">{children}</main>
       </div>

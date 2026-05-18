@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireAdminAccess } from "@/lib/auth/session";
+import { requireAdminAccess, requireSuperAdminAccess } from "@/lib/auth/session";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { logAudit } from "@/lib/audit/log";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -109,6 +109,53 @@ export async function createStudentAction(formData: FormData) {
   await logAudit({ actorId: user.id, action: "user_created", resourceType: "profile", resourceId: created.user.id, afterData: parsed });
   revalidatePath("/admin/users");
   redirect("/admin/users?success=Student%20created");
+}
+
+export async function createAdminAction(formData: FormData) {
+  const { user } = await requireSuperAdminAccess();
+  const parsed = z
+    .object({
+      email: z.string().email(),
+      full_name: z.string().min(1),
+      password: z.string().min(8)
+    })
+    .parse(Object.fromEntries(formData));
+
+  if (isDemoMode()) await demoRedirect("/admin/admins");
+  ensureSupabaseReady();
+
+  const supabase = createAdminClient();
+  const { data: created, error } = await supabase.auth.admin.createUser({
+    email: parsed.email,
+    password: parsed.password,
+    email_confirm: true,
+    user_metadata: { full_name: parsed.full_name }
+  });
+  if (error || !created.user) throw new Error(error?.message ?? "Could not create admin");
+
+  const profileInsert = await supabase.from("profiles").insert({
+    id: created.user.id,
+    email: parsed.email,
+    full_name: parsed.full_name,
+    is_active: true
+  });
+  if (profileInsert.error) throw new Error(profileInsert.error.message);
+
+  const roleInsert = await supabase.from("user_roles").insert({
+    user_id: created.user.id,
+    role_id: await roleIdFor("admin")
+  });
+  if (roleInsert.error) throw new Error(roleInsert.error.message);
+
+  await logAudit({
+    actorId: user.id,
+    action: "user_created",
+    resourceType: "profile",
+    resourceId: created.user.id,
+    afterData: { email: parsed.email, full_name: parsed.full_name, role: "admin" }
+  });
+  revalidatePath("/admin/admins");
+  redirect("/admin/admins?success=Admin%20created");
 }
 
 export async function updateStudentAction(formData: FormData) {
