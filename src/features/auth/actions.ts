@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { cloneDemoData } from "@/lib/demo-data";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { demoUserCookie, requireAuth } from "@/lib/auth/session";
-import { hasAdminRole } from "@/lib/auth/roles";
+import { getAuthenticatedHomePath } from "@/lib/auth/redirects";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { forgotPasswordSchema, loginSchema, ownPasswordSchema, ownProfileSchema, resetPasswordSchema } from "@/features/auth/validation";
@@ -39,7 +39,10 @@ export async function loginAction(formData: FormData) {
       resourceId: null,
       metadata: { mode: "demo" }
     });
-    redirect(profile.email === "admin@example.com" ? "/admin" : "/dashboard");
+    const roles = cloneDemoData()
+      .userRoles.filter((role) => role.user_id === profile.id)
+      .map((role) => role.role);
+    redirect(getAuthenticatedHomePath(profile, roles));
   }
 
   if (!isSupabaseConfigured()) {
@@ -67,7 +70,10 @@ export async function loginAction(formData: FormData) {
   });
 
   const admin = createAdminClient();
-  const { data: roles } = await admin.from("user_roles").select("roles(name)").eq("user_id", userId);
+  const [{ data: roles }, { data: profile }] = await Promise.all([
+    admin.from("user_roles").select("roles(name)").eq("user_id", userId),
+    admin.from("profiles").select("must_change_password").eq("id", userId).single()
+  ]);
   const roleNames =
     roles
       ?.map((row) => {
@@ -76,7 +82,7 @@ export async function loginAction(formData: FormData) {
       })
       .filter((role): role is "student" | "teacher" | "admin" | "super_admin" => Boolean(role)) ?? [];
 
-  redirect(hasAdminRole(roleNames) ? "/admin" : "/dashboard");
+  redirect(getAuthenticatedHomePath({ must_change_password: profile?.must_change_password ?? false }, roleNames));
 }
 
 export async function logoutAction() {
@@ -182,6 +188,9 @@ export async function updateOwnPasswordAction(formData: FormData) {
     password: parsed.data.password
   });
   if (authUpdate.error) throw new Error(authUpdate.error.message);
+
+  const profileUpdate = await admin.from("profiles").update({ must_change_password: false }).eq("id", user.id);
+  if (profileUpdate.error) throw new Error(profileUpdate.error.message);
 
   await logAudit({
     actorId: user.id,

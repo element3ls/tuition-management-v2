@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function AccountPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; success?: string }>;
+  searchParams: Promise<{ error?: string; success?: string; passwordChange?: string }>;
 }) {
   const [user, roles, params] = await Promise.all([requireAuth(), getCurrentUserRoles(), searchParams]);
   const homeHref = hasAdminRole(roles) ? "/admin" : "/dashboard";
@@ -28,12 +28,19 @@ export default async function AccountPage({
           title="Account"
           description="Update your own profile details and password."
           actions={
-            <Link className="text-sm font-medium text-primary hover:underline" href={homeHref}>
-              Back to dashboard
-            </Link>
+            user.must_change_password ? null : (
+              <Link className="text-sm font-medium text-primary hover:underline" href={homeHref}>
+                Back to dashboard
+              </Link>
+            )
           }
         />
         <div className="grid gap-4">
+          {user.must_change_password || params.passwordChange === "required" ? (
+            <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+              You must set a new password before accessing student content.
+            </Alert>
+          ) : null}
           {params.error ? <Alert className="border-destructive text-destructive">{params.error}</Alert> : null}
           {params.success ? <Alert>{params.success}</Alert> : null}
           <div className="grid gap-4 lg:grid-cols-2">

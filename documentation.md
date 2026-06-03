@@ -114,6 +114,10 @@ Admin actions live in `src/features/admin/actions.ts`. With Supabase configured,
 
 Create students at `/admin/users`.
 
+`admin` and `super_admin` users can also import new students from an `.xlsx` template at `/admin/users`. The required first-worksheet columns are `Name`, `Email`, `Temporary Password`, `Phone`, and `Guardian Name`; phone and guardian values may be blank. The browser reads the workbook and sends validated rows in small batches. Existing emails, duplicate emails, and invalid rows are skipped, and the import does not assign groups or access grants.
+
+New students created manually or by import have `profiles.must_change_password = true` and are redirected to `/account` until they set a new password. Student creation audit records exclude temporary passwords, and failed profile or role writes trigger cleanup of the newly-created Auth user.
+
 Create groups and add students to groups at `/admin/groups`.
 
 Create access grants at `/admin/access`:

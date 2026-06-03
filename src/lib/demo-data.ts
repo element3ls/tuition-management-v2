@@ -22,6 +22,7 @@ export const demoData: AppData = {
       email: "student@example.com",
       full_name: "Demo Student",
       is_active: true,
+      must_change_password: false,
       created_at: now,
       updated_at: now
     },
@@ -30,6 +31,7 @@ export const demoData: AppData = {
       email: "admin@example.com",
       full_name: "Demo Admin",
       is_active: true,
+      must_change_password: false,
       created_at: now,
       updated_at: now
     },
@@ -38,6 +40,7 @@ export const demoData: AppData = {
       email: "locked@example.com",
       full_name: "No Access Student",
       is_active: true,
+      must_change_password: false,
       created_at: now,
       updated_at: now
     }

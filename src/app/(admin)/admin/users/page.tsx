@@ -1,14 +1,23 @@
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge } from "@/components/admin/admin-ui";
 import { PageHeading } from "@/components/layout/page-heading";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { createStudentAction, deactivateStudentAction, updateStudentAction } from "@/features/admin/actions";
+import { hasAnyRole } from "@/lib/auth/roles";
+import { getCurrentUserRoles } from "@/lib/auth/session";
 import { getAppData } from "@/server/data/app-data";
+import { StudentImportDialog } from "@/app/(admin)/admin/users/student-import-dialog";
 
-export default async function UsersPage() {
-  const data = await getAppData();
+export default async function UsersPage({
+  searchParams
+}: {
+  searchParams: Promise<{ error?: string; success?: string }>;
+}) {
+  const [data, roles, params] = await Promise.all([getAppData(), getCurrentUserRoles(), searchParams]);
+  const canImportStudents = hasAnyRole(roles, ["admin", "super_admin"]);
   const students = data.studentProfiles.map((student) => ({
     ...student,
     profile: data.profiles.find((profile) => profile.id === student.user_id),
@@ -24,31 +33,36 @@ export default async function UsersPage() {
         title="Students"
         description="Maintain student profiles, login emails, guardians, and account status."
         actions={
-          <AdminDialog title="Create student" description="Create login access and the student profile." trigger={<CreateButton>New student</CreateButton>}>
-            <form action={createStudentAction} className="grid gap-3" data-mutation-form>
-              <Field label="Full name">
-                <Input name="full_name" required />
-              </Field>
-              <Field label="Email">
-                <Input name="email" type="email" required />
-              </Field>
-              <Field label="Temporary password">
-                <Input name="password" type="password" minLength={8} required />
-              </Field>
-              <Field label="Guardian name">
-                <Input name="guardian_name" />
-              </Field>
-              <Field label="Phone">
-                <Input name="phone" />
-              </Field>
-              <Field label="Notes">
-                <Textarea name="notes" />
-              </Field>
-              <Button type="submit">Create student</Button>
-            </form>
-          </AdminDialog>
+          <>
+            {canImportStudents ? <StudentImportDialog /> : null}
+            <AdminDialog title="Create student" description="Create login access and the student profile." trigger={<CreateButton>New student</CreateButton>}>
+              <form action={createStudentAction} className="grid gap-3" data-mutation-form>
+                <Field label="Full name">
+                  <Input name="full_name" required />
+                </Field>
+                <Field label="Email">
+                  <Input name="email" type="email" required />
+                </Field>
+                <Field label="Temporary password">
+                  <Input name="password" type="password" minLength={8} required />
+                </Field>
+                <Field label="Guardian name">
+                  <Input name="guardian_name" />
+                </Field>
+                <Field label="Phone">
+                  <Input name="phone" />
+                </Field>
+                <Field label="Notes">
+                  <Textarea name="notes" />
+                </Field>
+                <Button type="submit">Create student</Button>
+              </form>
+            </AdminDialog>
+          </>
         }
       />
+      {params.error ? <Alert variant="destructive" className="mb-4">{params.error}</Alert> : null}
+      {params.success ? <Alert className="mb-4">{params.success}</Alert> : null}
       <div className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
         <Table>
           <TableHeader>

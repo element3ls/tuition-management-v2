@@ -38,4 +38,16 @@ test("admin can open CMS", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
   await page.getByRole("link", { name: "Content" }).click();
   await expect(page.getByRole("heading", { name: "Syllabus content" })).toBeVisible();
+
+  await page.goto("/admin/users");
+  await expect(page.getByRole("heading", { name: "Students" })).toBeVisible();
+  await page.getByRole("button", { name: "Import students" }).click();
+  await expect(page.getByRole("heading", { name: "Import students" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Download template" })).toHaveAttribute(
+    "href",
+    "/templates/student-batch-upload-template.xlsx"
+  );
+  await page.locator('input[type="file"]').setInputFiles("public/templates/student-batch-upload-template.xlsx");
+  await page.getByRole("button", { name: "Start import" }).click();
+  await expect(page.getByText("The workbook does not contain any student rows.")).toBeVisible();
 });

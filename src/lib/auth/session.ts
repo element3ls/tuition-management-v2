@@ -7,6 +7,7 @@ import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { adminRoles, hasAnyRole } from "@/lib/auth/roles";
+import { getAuthenticatedHomePath } from "@/lib/auth/redirects";
 import type { Profile, RoleName } from "@/types/domain";
 
 export const demoUserCookie = "demo_user_id";
@@ -40,6 +41,7 @@ export async function getCurrentUser(): Promise<Profile | null> {
       email: user.email ?? "",
       full_name: user.user_metadata?.full_name ?? user.email ?? "User",
       is_active: true,
+      must_change_password: false,
       created_at: user.created_at,
       updated_at: user.updated_at ?? user.created_at
     }
@@ -94,11 +96,21 @@ export async function requireSuperAdminAccess() {
   return requireRole(["super_admin"]);
 }
 
+export async function requireAdminOrSuperAdminAccess() {
+  return requireRole(["admin", "super_admin"]);
+}
+
 export async function requireStudentAccess() {
-  return requireRole(["student"]);
+  const result = await requireRole(["student"]);
+  if (result.user.must_change_password) {
+    redirect("/account?passwordChange=required");
+  }
+  return result;
 }
 
 export async function getLoginRedirect() {
+  const user = await getCurrentUser();
+  if (!user) return "/login";
   const roles = await getCurrentUserRoles();
-  return hasAnyRole(roles, adminRoles) ? "/admin" : "/dashboard";
+  return getAuthenticatedHomePath(user, roles);
 }

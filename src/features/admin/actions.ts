@@ -3,11 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireAdminAccess, requireSuperAdminAccess } from "@/lib/auth/session";
+import { requireAdminAccess, requireAdminOrSuperAdminAccess, requireSuperAdminAccess } from "@/lib/auth/session";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { logAudit } from "@/lib/audit/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateMaterialFile } from "@/lib/storage/materials";
+import {
+  studentAccountInputSchema,
+  studentImportBatchSize,
+  studentImportRowInputSchema,
+  type StudentImportResult,
+  type StudentImportRowInput
+} from "@/features/admin/student-import";
+import { createStudentAccount } from "@/features/admin/students";
 
 const statusSchema = z.enum(["draft", "published", "archived"]);
 const resourceTypeSchema = z.enum(["year", "subject", "chapter", "question", "recording", "solution_material"]);
@@ -58,8 +66,7 @@ function ensureSupabaseReady() {
   }
 }
 
-async function roleIdFor(name: string) {
-  const supabase = createAdminClient();
+async function roleIdFor(name: string, supabase = createAdminClient()) {
   const { data, error } = await supabase.from("roles").select("id").eq("name", name).single();
   if (error || !data) throw new Error(`Role not found: ${name}`);
   return data.id as string;
@@ -67,48 +74,120 @@ async function roleIdFor(name: string) {
 
 export async function createStudentAction(formData: FormData) {
   const { user } = await requireAdminAccess();
-  const parsed = z
-    .object({
-      email: z.string().email(),
-      full_name: z.string().min(1),
-      password: z.string().min(8),
-      guardian_name: z.string().optional(),
-      phone: z.string().optional(),
-      notes: z.string().optional()
-    })
-    .parse(Object.fromEntries(formData));
+  const parsed = studentAccountInputSchema.parse(Object.fromEntries(formData));
 
   if (isDemoMode()) await demoRedirect("/admin/users");
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: created, error } = await supabase.auth.admin.createUser({
-    email: parsed.email,
-    password: parsed.password,
-    email_confirm: true,
-    user_metadata: { full_name: parsed.full_name }
+  const result = await createStudentAccount(parsed, {
+    actorId: user.id,
+    studentRoleId: await roleIdFor("student", supabase),
+    supabase
   });
-  if (error || !created.user) throw new Error(error?.message ?? "Could not create user");
 
-  await supabase.from("profiles").insert({
-    id: created.user.id,
-    email: parsed.email,
-    full_name: parsed.full_name,
-    is_active: true
-  });
-  await supabase.from("student_profiles").insert({
-    user_id: created.user.id,
-    guardian_name: parsed.guardian_name || null,
-    phone: parsed.phone || null,
-    notes: parsed.notes || null
-  });
-  await supabase.from("user_roles").insert({
-    user_id: created.user.id,
-    role_id: await roleIdFor("student")
-  });
-  await logAudit({ actorId: user.id, action: "user_created", resourceType: "profile", resourceId: created.user.id, afterData: parsed });
+  if (result.status !== "created") {
+    redirect(`/admin/users?error=${encodeURIComponent(result.reason)}`);
+  }
+
   revalidatePath("/admin/users");
   redirect("/admin/users?success=Student%20created");
+}
+
+export async function importStudentsBatchAction(rows: StudentImportRowInput[]) {
+  const { user } = await requireAdminOrSuperAdminAccess();
+  if (!Array.isArray(rows) || rows.length > studentImportBatchSize) {
+    throw new Error(`Import batches may contain at most ${studentImportBatchSize} rows.`);
+  }
+
+  const results: StudentImportResult[] = [];
+  const parsedRows: StudentImportRowInput[] = [];
+  const seenEmails = new Set<string>();
+
+  for (const row of rows) {
+    const parsed = studentImportRowInputSchema.safeParse(row);
+    const email = typeof row?.email === "string" ? row.email.trim().toLowerCase() : "";
+
+    if (!parsed.success) {
+      results.push({
+        rowNumber: typeof row?.rowNumber === "number" ? row.rowNumber : 0,
+        email,
+        status: "skipped",
+        reason: parsed.error.issues[0]?.message ?? "Row is invalid."
+      });
+      continue;
+    }
+
+    if (seenEmails.has(parsed.data.email)) {
+      results.push({
+        rowNumber: parsed.data.rowNumber,
+        email: parsed.data.email,
+        status: "skipped",
+        reason: "Duplicate email in batch."
+      });
+      continue;
+    }
+
+    seenEmails.add(parsed.data.email);
+    parsedRows.push(parsed.data);
+  }
+
+  if (isDemoMode()) {
+    return {
+      results: [
+        ...results,
+        ...parsedRows.map((row) => ({
+          rowNumber: row.rowNumber,
+          email: row.email,
+          status: "skipped" as const,
+          reason: "Demo mode does not persist imports."
+        }))
+      ].sort((a, b) => a.rowNumber - b.rowNumber)
+    };
+  }
+
+  ensureSupabaseReady();
+  const supabase = createAdminClient();
+  const studentRoleId = await roleIdFor("student", supabase);
+  const emails = parsedRows.map((row) => row.email);
+  const existingEmails = new Set<string>();
+
+  if (emails.length > 0) {
+    const { data: existingProfiles, error } = await supabase.from("profiles").select("email").in("email", emails);
+    if (error) throw new Error(error.message);
+    for (const profile of existingProfiles ?? []) {
+      existingEmails.add(profile.email.toLowerCase());
+    }
+  }
+
+  for (const row of parsedRows) {
+    if (existingEmails.has(row.email)) {
+      results.push({ rowNumber: row.rowNumber, email: row.email, status: "skipped", reason: "Email already exists." });
+      continue;
+    }
+
+    const creation = await createStudentAccount(
+      {
+        full_name: row.full_name,
+        email: row.email,
+        password: row.password,
+        phone: row.phone,
+        guardian_name: row.guardian_name,
+        notes: ""
+      },
+      { actorId: user.id, studentRoleId, supabase }
+    );
+
+    if (creation.status === "created") {
+      results.push({ rowNumber: row.rowNumber, email: row.email, status: "imported" });
+      existingEmails.add(row.email);
+    } else {
+      results.push({ rowNumber: row.rowNumber, email: row.email, status: "skipped", reason: creation.reason });
+    }
+  }
+
+  revalidatePath("/admin/users");
+  return { results: results.sort((a, b) => a.rowNumber - b.rowNumber) };
 }
 
 export async function createAdminAction(formData: FormData) {

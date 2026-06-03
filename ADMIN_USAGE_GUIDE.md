@@ -40,9 +40,20 @@ Go to `/admin/users`.
 Use this page to:
 
 - Create a student record.
+- Import new student records from an `.xlsx` workbook.
 - Edit student details.
 - Deactivate a student.
 - Review student status.
+
+The batch import is available only to `admin` and `super_admin` users. It reads the first worksheet only. Download the template from the import dialog and keep these columns unchanged:
+
+```text
+Name | Email | Temporary Password | Phone | Guardian Name
+```
+
+`Name`, `Email`, and `Temporary Password` are required. `Phone` and `Guardian Name` values are optional, but their columns must remain in the workbook. Imports create new students only: existing emails, duplicate workbook emails, and invalid rows are skipped. The completion report shows how many rows were imported, how many were skipped, and the reason for each skipped row.
+
+The import does not assign groups or access grants. New students must change their temporary password after login. Treat completed workbooks as sensitive because they contain passwords, and keep the import dialog open until all rows are processed.
 
 After creating a student, add the student to a group or create a direct access grant. Without access, the student can log in but will not see assigned content.
 
