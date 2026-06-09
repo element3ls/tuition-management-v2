@@ -31,3 +31,15 @@ export function getServiceRoleEnv() {
 
   return { url, serviceRoleKey };
 }
+
+export function getOpenAIEnv() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not configured.");
+  }
+
+  return {
+    apiKey,
+    model: process.env.OPENAI_EXAM_MODEL?.trim() || "gpt-5.4-mini"
+  };
+}

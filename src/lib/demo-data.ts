@@ -12,7 +12,8 @@ export const demoIds = {
   chapter: "40000000-0000-4000-8000-000000000001",
   question: "50000000-0000-4000-8000-000000000001",
   recording: "60000000-0000-4000-8000-000000000001",
-  material: "70000000-0000-4000-8000-000000000001"
+  material: "70000000-0000-4000-8000-000000000001",
+  exam: "72000000-0000-4000-8000-000000000001"
 } as const;
 
 export const demoData: AppData = {
@@ -177,6 +178,59 @@ export const demoData: AppData = {
       status: "published",
       is_ai_indexable: true,
       uploaded_by: demoIds.admin,
+      created_at: now,
+      updated_at: now
+    }
+  ],
+  exams: [
+    {
+      id: demoIds.exam,
+      chapter_id: demoIds.chapter,
+      title: "Linear Equations Practice Exam",
+      description: "Reviewed questions and worked answers.",
+      source_bucket: "exam-sources",
+      source_key: "demo/linear-equations-exam.pdf",
+      source_file_name: "linear-equations-exam.pdf",
+      source_mime_type: "application/pdf",
+      source_size_bytes: 32768,
+      status: "published",
+      ai_model: "gpt-5.4-mini",
+      ai_response_id: null,
+      ai_error: null,
+      processing_started_at: now,
+      processing_completed_at: now,
+      uploaded_by: demoIds.admin,
+      approved_by: demoIds.admin,
+      approved_at: now,
+      published_at: now,
+      created_at: now,
+      updated_at: now
+    }
+  ],
+  examQuestions: [
+    {
+      id: "73000000-0000-4000-8000-000000000001",
+      exam_id: demoIds.exam,
+      question_number: "1",
+      question_text: "Solve $2x + 5 = 17$.",
+      answer_text: "Subtract 5 from both sides:\n\n$2x = 12$\n\nDivide by 2:\n\n$\\boxed{x = 6}$",
+      marks: 2,
+      source_pages: [1],
+      review_warning: null,
+      sort_order: 1,
+      created_at: now,
+      updated_at: now
+    },
+    {
+      id: "73000000-0000-4000-8000-000000000002",
+      exam_id: demoIds.exam,
+      question_number: "2",
+      question_text: "Solve $3(x - 2) = 15$.",
+      answer_text: "Divide by 3:\n\n$x - 2 = 5$\n\nAdd 2:\n\n$\\boxed{x = 7}$",
+      marks: 2,
+      source_pages: [1],
+      review_warning: null,
+      sort_order: 2,
       created_at: now,
       updated_at: now
     }

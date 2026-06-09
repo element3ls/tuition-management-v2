@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen,
   ClipboardList,
+  FileCheck2,
   FileText,
   Gauge,
   KeyRound,
@@ -26,6 +27,7 @@ const links = [
   { label: "Content", href: "/admin/content", icon: BookOpen },
   { label: "Recordings", href: "/admin/recordings", icon: Video },
   { label: "Materials", href: "/admin/materials", icon: FileText },
+  { label: "Exams", href: "/admin/exams", icon: FileCheck2 },
   { label: "Tags", href: "/admin/tags", icon: Tags },
   { label: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardList }
 ] as const;

@@ -71,7 +71,10 @@ try {
       (select count(*)::int from public.recordings where status = 'published') as published_recordings,
       (select count(*)::int from public.solution_materials where status = 'published') as published_materials,
       (select count(*)::int from public.access_grants where revoked_at is null) as active_grants,
-      (select count(*)::int from storage.buckets where id = 'solution-materials' and public = false) as private_solution_buckets;
+      (select count(*)::int from storage.buckets where id = 'solution-materials' and public = false) as private_solution_buckets,
+      (select count(*)::int from storage.buckets where id = 'exam-sources' and public = false) as private_exam_buckets,
+      (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exams') as exam_tables,
+      (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exam_questions') as exam_question_tables;
   `);
 
   const counts = rows[0];
@@ -89,7 +92,7 @@ try {
       {
         authUsers: ["student@example.com", "admin@example.com"],
         counts,
-        privateBucket: true,
+        privateBuckets: ["solution-materials", "exam-sources"],
         signedUrlCreated: true
       },
       null,

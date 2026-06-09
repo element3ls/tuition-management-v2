@@ -127,6 +127,24 @@ Files are stored in the private Supabase `solution-materials` bucket. Students r
 
 To allow downloading, mark the material downloadable and grant `download` permission. `download` implies `view`; `view` alone does not imply download.
 
+## Upload And Review Exams
+
+Go to `/admin/exams`.
+
+1. Select a chapter, enter an exam title, and upload a PDF.
+2. Open the new exam and confirm the private source PDF is readable.
+3. Select **Generate questions and answers**.
+4. Wait for processing to finish. You can leave and revisit the page while it runs.
+5. Compare every generated question and worked answer with the PDF.
+6. Correct transcription, mathematical working, marks, source pages, and warnings.
+7. Select **Save draft** while reviewing.
+8. Clear every review warning after resolving it.
+9. Select **Approve and publish entire exam** only when every answer is ready.
+
+Published exams appear to students who can view the parent chapter. Students never receive the source PDF. Published exams are read-only, so corrections require uploading a revised exam rather than silently changing approved answers.
+
+The student viewer uses personalized watermarks and blocks common copy, right-click, save, and print actions. These are deterrents only and cannot guarantee protection from screenshots, cameras, OCR, or technical extraction.
+
 ## Grant Access
 
 Go to `/admin/access`.

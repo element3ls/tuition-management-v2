@@ -18,11 +18,14 @@ export type TranscriptSource = "none" | "manual" | "youtube" | "generated";
 
 export type TranscriptReviewStatus = "draft" | "reviewed" | "approved";
 
+export type ExamStatus = "uploading" | "uploaded" | "processing" | "ready" | "failed" | "published" | "archived";
+
 export type ActivityEventType =
   | "login"
   | "recording_viewed"
   | "solution_material_opened"
   | "solution_material_downloaded"
+  | "exam_viewed"
   | "search_performed";
 
 export type AuditAction =
@@ -43,7 +46,12 @@ export type AuditAction =
   | "recording_created"
   | "recording_updated"
   | "material_uploaded"
-  | "material_archived";
+  | "material_archived"
+  | "exam_uploaded"
+  | "exam_processing_started"
+  | "exam_processing_completed"
+  | "exam_updated"
+  | "exam_published";
 
 export type Profile = {
   id: string;
@@ -174,6 +182,44 @@ export type SolutionMaterial = {
   updated_at: string;
 };
 
+export type Exam = {
+  id: string;
+  chapter_id: string;
+  title: string;
+  description: string | null;
+  source_bucket: string;
+  source_key: string;
+  source_file_name: string;
+  source_mime_type: string;
+  source_size_bytes: number;
+  status: ExamStatus;
+  ai_model: string | null;
+  ai_response_id: string | null;
+  ai_error: string | null;
+  processing_started_at: string | null;
+  processing_completed_at: string | null;
+  uploaded_by: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ExamQuestion = {
+  id: string;
+  exam_id: string;
+  question_number: string;
+  question_text: string;
+  answer_text: string;
+  marks: number | null;
+  source_pages: number[];
+  review_warning: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AccessGrant = {
   id: string;
   grantee_type: GranteeType;
@@ -236,6 +282,8 @@ export type AppData = {
   questions: Question[];
   recordings: Recording[];
   solutionMaterials: SolutionMaterial[];
+  exams: Exam[];
+  examQuestions: ExamQuestion[];
   accessGrants: AccessGrant[];
   tags: Tag[];
   contentTags: ContentTag[];

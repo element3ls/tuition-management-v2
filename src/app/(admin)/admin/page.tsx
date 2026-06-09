@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeading } from "@/components/layout/page-heading";
 import { getAppData } from "@/server/data/app-data";
-import { BookOpen, FileText, Layers, Users, UserRoundCog, Video } from "lucide-react";
+import { BookOpen, FileCheck2, FileText, Layers, Users, UserRoundCog, Video } from "lucide-react";
 
 export default async function AdminDashboardPage() {
   const data = await getAppData();
@@ -12,7 +12,8 @@ export default async function AdminDashboardPage() {
     ["Subjects", data.subjects.length, BookOpen],
     ["Chapters", data.chapters.length, BookOpen],
     ["Recordings", data.recordings.length, Video],
-    ["Solution materials", data.solutionMaterials.length, FileText]
+    ["Solution materials", data.solutionMaterials.length, FileText],
+    ["Exams", data.exams.length, FileCheck2]
   ] as const;
 
   return (

@@ -41,6 +41,7 @@ test("admin can open CMS", async ({ page }) => {
 
   await page.goto("/admin/users");
   await expect(page.getByRole("heading", { name: "Students" })).toBeVisible();
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Import students" }).click();
   await expect(page.getByRole("heading", { name: "Import students" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Download template" })).toHaveAttribute(
@@ -50,4 +51,25 @@ test("admin can open CMS", async ({ page }) => {
   await page.locator('input[type="file"]').setInputFiles("public/templates/student-batch-upload-template.xlsx");
   await page.getByRole("button", { name: "Start import" }).click();
   await expect(page.getByText("The workbook does not contain any student rows.")).toBeVisible();
+});
+
+test("admin can review a published exam", async ({ page }) => {
+  await login(page, adminEmail);
+  await page.goto("/admin/exams");
+  await expect(page.getByRole("heading", { name: "Exam intake" })).toBeVisible();
+  await expect(page.getByText("Linear Equations Practice Exam")).toBeVisible();
+  await page.getByRole("link", { name: "Review" }).click();
+  await expect(page.getByRole("heading", { name: "Linear Equations Practice Exam" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Questions and worked answers" })).toBeVisible();
+  await expect(page.getByText("This exam is published and read-only.")).toBeVisible();
+});
+
+test("student can view protected exam questions and worked answers", async ({ page }) => {
+  await login(page, studentEmail);
+  await page.goto("/exams/72000000-0000-4000-8000-000000000001");
+  await expect(page.getByRole("heading", { name: "Linear Equations Practice Exam" })).toBeVisible();
+  await expect(page.getByText("Question 1", { exact: true })).toBeVisible();
+  await expect(page.getByText("Worked answer").first()).toBeVisible();
+  await expect(page.locator(".katex").first()).toBeVisible();
+  await expect(page.locator(".protected-exam-content")).toHaveCSS("user-select", "none");
 });

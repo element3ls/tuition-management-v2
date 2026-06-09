@@ -22,6 +22,9 @@ export default async function ChapterPage({ params }: { params: Promise<{ chapte
   const questions = data.questions.filter((question) => question.chapter_id === chapterId && question.status === "published").sort(bySortOrderThenName);
   const recordings = data.recordings.filter((recording) => recording.chapter_id === chapterId && recording.status === "published").sort(bySortOrderThenName);
   const materials = data.solutionMaterials.filter((material) => material.chapter_id === chapterId && material.status === "published").sort(bySortOrderThenName);
+  const exams = data.exams
+    .filter((exam) => exam.chapter_id === chapterId && exam.status === "published")
+    .sort((a, b) => a.title.localeCompare(b.title));
 
   return (
     <>
@@ -64,6 +67,21 @@ export default async function ChapterPage({ params }: { params: Promise<{ chapte
           </CardContent>
         </Card>
       </div>
+      {exams.length > 0 ? (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>Exams</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2 md:grid-cols-2">
+            {exams.map((exam) => (
+              <Link key={exam.id} href={`/exams/${exam.id}`} className="rounded-md border p-3 hover:bg-muted">
+                <div className="font-medium">{exam.title}</div>
+                <div className="text-xs text-muted-foreground">{exam.description ?? "Reviewed questions and worked answers"}</div>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
     </>
   );
 }

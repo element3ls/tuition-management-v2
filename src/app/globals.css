@@ -31,6 +31,19 @@ body {
   color: hsl(var(--foreground));
 }
 
+@media print {
+  .protected-exam-content {
+    display: none !important;
+  }
+
+  body::before {
+    content: "Printing this protected exam content is disabled.";
+    display: block;
+    padding: 2rem;
+    font: 600 16px/1.5 sans-serif;
+  }
+}
+
 @layer base {
   .theme {
     --font-heading: var(--font-sans);

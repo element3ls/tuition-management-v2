@@ -26,6 +26,8 @@ cp .env.example .env.local
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+OPENAI_API_KEY=
+OPENAI_EXAM_MODEL=gpt-5.4-mini
 ```
 
 Blank Supabase values enable local demo mode outside production. Demo users:
@@ -105,6 +107,7 @@ Admin routes:
 - `/admin/content`
 - `/admin/recordings`
 - `/admin/materials`
+- `/admin/exams`
 - `/admin/tags`
 - `/admin/audit-logs`
 
@@ -169,6 +172,24 @@ Maximum file size: 25 MB.
 
 Files go to private Supabase Storage bucket `solution-materials`. Metadata is stored in `solution_materials`.
 
+## Exam Intake And Review
+
+Manage exams at `/admin/exams`.
+
+1. Upload a PDF and attach it to a chapter.
+2. The browser uploads directly to the private Supabase `exam-sources` bucket using resumable TUS upload.
+3. Open the uploaded exam and start AI processing.
+4. The application sends the staff-only PDF to the OpenAI Responses API in background mode.
+5. Review every generated question and worked answer against the source PDF.
+6. Resolve and clear every AI review warning.
+7. Save drafts as needed, then approve and publish the entire exam.
+
+The uploader may approve their own exam. Published exams are read-only and appear under the assigned chapter. Students receive only reviewed questions and answers; the source PDF route requires an admin role.
+
+Student exam pages render Markdown and LaTeX, include a personalized watermark, disable common copy/save/print interactions, hide protected content from print CSS, and log exam views. These controls discourage casual copying but cannot prevent screenshots, cameras, browser developer tools, or OCR.
+
+Exam processing states are `uploading`, `uploaded`, `processing`, `ready`, `failed`, `published`, and `archived`. A failed exam can be processed again. Publication and reviewed question updates are committed in one database transaction.
+
 ## Private Storage And Signed URLs
 
 Student material pages call `/api/materials/[materialId]/signed-url`.
@@ -194,6 +215,7 @@ Student routes:
 - `/questions/[questionId]`
 - `/recordings/[recordingId]`
 - `/materials/[materialId]`
+- `/exams/[examId]`
 - `/search`
 
 All content is loaded through server-side permission checks. Direct unauthorized URLs show access denied content or redirect safely.

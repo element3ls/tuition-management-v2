@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
+import "katex/dist/katex.min.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { SavingOverlayProvider } from "@/components/layout/saving-overlay-provider";

@@ -103,6 +103,67 @@ insert into public.solution_materials (id, chapter_id, question_id, title, descr
 values ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001', 'Linear Equations Solution Sheet', 'PDF solution notes for the demo question.', 'solution-materials', 'demo/linear-equations-solution.pdf', 'linear-equations-solution.pdf', 'application/pdf', 24576, true, 'published', true, '00000000-0000-4000-8000-000000000002')
 on conflict (id) do update set title = excluded.title, description = excluded.description, status = excluded.status;
 
+insert into public.exams (
+  id, chapter_id, title, description, source_bucket, source_key, source_file_name, source_mime_type,
+  source_size_bytes, status, ai_model, uploaded_by, approved_by, approved_at, published_at
+)
+values (
+  '72000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001',
+  'Linear Equations Practice Exam',
+  'Reviewed questions and worked answers.',
+  'exam-sources',
+  'demo/linear-equations-exam.pdf',
+  'linear-equations-exam.pdf',
+  'application/pdf',
+  32768,
+  'published',
+  'gpt-5.4-mini',
+  '00000000-0000-4000-8000-000000000002',
+  '00000000-0000-4000-8000-000000000002',
+  now(),
+  now()
+)
+on conflict (id) do update
+set title = excluded.title,
+    description = excluded.description,
+    status = excluded.status,
+    approved_by = excluded.approved_by,
+    approved_at = excluded.approved_at,
+    published_at = excluded.published_at;
+
+insert into public.exam_questions (
+  id, exam_id, question_number, question_text, answer_text, marks, source_pages, sort_order
+)
+values
+  (
+    '73000000-0000-4000-8000-000000000001',
+    '72000000-0000-4000-8000-000000000001',
+    '1',
+    'Solve $2x + 5 = 17$.',
+    'Subtract 5 from both sides: $2x = 12$. Divide by 2: $\boxed{x = 6}$.',
+    2,
+    array[1],
+    1
+  ),
+  (
+    '73000000-0000-4000-8000-000000000002',
+    '72000000-0000-4000-8000-000000000001',
+    '2',
+    'Solve $3(x - 2) = 15$.',
+    'Divide by 3: $x - 2 = 5$. Add 2: $\boxed{x = 7}$.',
+    2,
+    array[1],
+    2
+  )
+on conflict (id) do update
+set question_number = excluded.question_number,
+    question_text = excluded.question_text,
+    answer_text = excluded.answer_text,
+    marks = excluded.marks,
+    source_pages = excluded.source_pages,
+    sort_order = excluded.sort_order;
+
 insert into public.access_grants (id, grantee_type, grantee_id, resource_type, resource_id, permission, starts_at, expires_at, granted_by)
 values ('80000000-0000-4000-8000-000000000001', 'group', '10000000-0000-4000-8000-000000000001', 'year', '20000000-0000-4000-8000-000000000001', 'download', now() - interval '1 day', null, '00000000-0000-4000-8000-000000000002')
 on conflict (id) do update set permission = excluded.permission, revoked_at = null, revoked_by = null;
