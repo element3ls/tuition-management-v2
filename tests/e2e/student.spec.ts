@@ -69,6 +69,7 @@ test("admin can review a published exam", async ({ page }) => {
   await expect(page.locator(".protected-exam-content")).toBeVisible();
   await expect(page.getByText("Question 1", { exact: true })).toBeVisible();
   await expect(page.getByText("Worked answer").first()).toBeVisible();
+  await expect(page.locator(".katex").first()).toBeVisible();
 });
 
 test("student can view protected exam questions and worked answers", async ({ page }) => {

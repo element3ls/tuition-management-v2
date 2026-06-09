@@ -9,4 +9,15 @@ describe("exam rich text", () => {
     expect(getByText("Answer:")).toBeInTheDocument();
     expect(container.querySelector(".katex")).not.toBeNull();
   });
+
+  it("renders AI-generated parenthesis and bracket LaTeX delimiters", () => {
+    const { container } = render(
+      <RichText>{"Gradient \\(m = 4\\).\n\n\\[\ny = 4x - \\frac12\n\\]"}</RichText>
+    );
+
+    expect(container.querySelectorAll(".katex")).toHaveLength(2);
+    expect(container.querySelector(".katex-display")).not.toBeNull();
+    expect(container.textContent).not.toContain("\\(");
+    expect(container.textContent).not.toContain("\\[");
+  });
 });

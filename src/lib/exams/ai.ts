@@ -50,7 +50,7 @@ const structuredOutputSchema = {
 const processingPrompt = `You are preparing a reviewed tuition exam solution from an uploaded PDF.
 
 Return every visible exam question in original order, including all subparts. For each item:
-- Transcribe the question faithfully. Preserve mathematical notation using Markdown and LaTeX delimiters.
+- Transcribe the question faithfully. Preserve mathematical notation using Markdown with $...$ for inline LaTeX and $$...$$ for display LaTeX. Do not use \\(...\\) or \\[...\\] delimiters.
 - Produce a complete worked answer suitable for students. Show reasoning and finish with a clear final answer.
 - Copy the printed mark allocation when visible; otherwise use null.
 - Record every one-based PDF page number containing the question.

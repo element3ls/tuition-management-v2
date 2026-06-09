@@ -4,6 +4,12 @@ import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 import { cn } from "@/lib/utils";
 
+export function normalizeMathDelimiters(value: string) {
+  return value
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, math: string) => `\n$$\n${math.trim()}\n$$\n`)
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_, math: string) => `$${math}$`);
+}
+
 export function RichText({ children, className }: { children: string; className?: string }) {
   return (
     <div
@@ -14,7 +20,7 @@ export function RichText({ children, className }: { children: string; className?
       )}
     >
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-        {children}
+        {normalizeMathDelimiters(children)}
       </ReactMarkdown>
     </div>
   );
