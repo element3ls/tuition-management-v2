@@ -2,21 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import * as tus from "tus-js-client";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/admin/admin-ui";
+import { uploadPdfToSignedUrl } from "@/lib/exams/signed-upload";
 import type { Chapter } from "@/types/domain";
 
 type UploadPreparation = {
   examId: string;
-  bucket: string;
-  path: string;
-  token: string;
-  uploadEndpoint: string;
+  signedUploadUrl: string;
 };
 
 export function ExamUploadForm({ chapters }: { chapters: Chapter[] }) {
@@ -52,25 +49,10 @@ export function ExamUploadForm({ chapters }: { chapters: Chapter[] }) {
       const preparation = (await prepareResponse.json()) as UploadPreparation & { error?: string };
       if (!prepareResponse.ok) throw new Error(preparation.error ?? "Could not prepare the upload.");
 
-      await new Promise<void>((resolve, reject) => {
-        const upload = new tus.Upload(file, {
-          endpoint: preparation.uploadEndpoint,
-          retryDelays: [0, 1000, 3000, 5000, 10000],
-          chunkSize: 6 * 1024 * 1024,
-          uploadDataDuringCreation: true,
-          removeFingerprintOnSuccess: true,
-          headers: { "x-signature": preparation.token },
-          metadata: {
-            bucketName: preparation.bucket,
-            objectName: preparation.path,
-            contentType: file.type,
-            cacheControl: "3600"
-          },
-          onError: reject,
-          onProgress: (uploaded, total) => setProgress(Math.round((uploaded / total) * 100)),
-          onSuccess: () => resolve()
-        });
-        upload.start();
+      await uploadPdfToSignedUrl({
+        url: preparation.signedUploadUrl,
+        file,
+        onProgress: setProgress
       });
 
       const completeResponse = await fetch(`/api/admin/exams/${preparation.examId}/complete`, { method: "POST" });

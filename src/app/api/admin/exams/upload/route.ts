@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminAccess } from "@/lib/auth/session";
-import { isDemoMode, isSupabaseConfigured, getPublicSupabaseEnv } from "@/lib/env";
+import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { examSourceBucket, examUploadInputSchema, safeExamFileName } from "@/lib/exams/validation";
 
@@ -43,14 +43,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error?.message ?? "Could not prepare the upload." }, { status: 500 });
   }
 
-  const { url } = getPublicSupabaseEnv();
-  const projectRef = new URL(url).hostname.split(".")[0];
-
   return NextResponse.json({
     examId,
-    bucket: examSourceBucket,
-    path: sourceKey,
-    token: data.token,
-    uploadEndpoint: `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`
+    signedUploadUrl: data.signedUrl
   });
 }
