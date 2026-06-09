@@ -19,6 +19,12 @@ function chapterContext(data: AppData, chapterId: string) {
   return [year?.name, subject?.name, chapter?.title].filter(Boolean).join(" / ");
 }
 
+function subjectContext(data: AppData, subjectId: string) {
+  const subject = data.subjects.find((item) => item.id === subjectId);
+  const year = subject ? data.years.find((item) => item.id === subject.year_id) : null;
+  return [year?.name, subject?.name].filter(Boolean).join(" / ");
+}
+
 function tagsFor(data: AppData, resourceType: SearchResult["type"], resourceId: string) {
   const tagIds = data.contentTags
     .filter((contentTag) => contentTag.resource_type === resourceType && contentTag.resource_id === resourceId)
@@ -91,6 +97,32 @@ export async function searchAccessibleContent(input: { userId: string; query: st
       description: material.description,
       href: `/materials/${material.id}`,
       context: chapterContext(data, material.chapter_id)
+    });
+  }
+
+  for (const exam of [...data.exams].sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id))) {
+    const examQuestions = data.examQuestions.filter((question) => question.exam_id === exam.id);
+    if (
+      !includesQuery(
+        [
+          exam.title,
+          exam.description,
+          ...examQuestions.flatMap((question) => [question.question_text, question.answer_text]),
+          ...tagsFor(data, "exam", exam.id)
+        ],
+        query
+      )
+    ) {
+      continue;
+    }
+    if (!(await canAccessResource({ userId, resourceType: "exam", resourceId: exam.id, permission: "view" }, data))) continue;
+    results.push({
+      type: "exam",
+      id: exam.id,
+      title: exam.title,
+      description: exam.description,
+      href: `/exams/${exam.id}`,
+      context: subjectContext(data, exam.subject_id)
     });
   }
 

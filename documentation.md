@@ -176,7 +176,7 @@ Files go to private Supabase Storage bucket `solution-materials`. Metadata is st
 
 Manage exams at `/admin/exams`.
 
-1. Upload a PDF and attach it to a chapter.
+1. Upload a PDF, select its subject, and select one or more covered chapters.
 2. The browser uploads directly to the private Supabase `exam-sources` bucket using resumable TUS upload.
 3. Open the uploaded exam and start AI processing.
 4. The application sends the staff-only PDF to the OpenAI Responses API in background mode.
@@ -184,7 +184,7 @@ Manage exams at `/admin/exams`.
 6. Resolve and clear every AI review warning.
 7. Save drafts as needed, then approve and publish the entire exam.
 
-The uploader may approve their own exam. Published exams are read-only and appear under the assigned chapter. Students receive only reviewed questions and answers; the source PDF route requires an admin role.
+The uploader may approve their own exam. Published exams are read-only and appear primarily on the subject page, with related links on each selected chapter page. Access inherits from the subject or year; a direct exam grant can be used for exceptional releases. Students receive only reviewed questions and answers; the source PDF route requires an admin role.
 
 Student exam pages render Markdown and LaTeX, include a personalized watermark, disable common copy/save/print interactions, hide protected content from print CSS, and log exam views. These controls discourage casual copying but cannot prevent screenshots, cameras, browser developer tools, or OCR.
 

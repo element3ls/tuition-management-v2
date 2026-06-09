@@ -37,6 +37,45 @@ describe("permission resolver", () => {
     ).resolves.toBe(true);
   });
 
+  it("allows year and subject grants to access exams", async () => {
+    const yearData = cloneDemoData();
+    await expect(
+      canAccessResource({ userId: demoIds.student, resourceType: "exam", resourceId: demoIds.exam, permission: "view", now }, yearData)
+    ).resolves.toBe(true);
+
+    const subjectData = cloneDemoData();
+    subjectData.accessGrants[0] = {
+      ...subjectData.accessGrants[0],
+      resource_type: "subject",
+      resource_id: demoIds.subject,
+      permission: "view"
+    };
+    await expect(
+      canAccessResource({ userId: demoIds.student, resourceType: "exam", resourceId: demoIds.exam, permission: "view", now }, subjectData)
+    ).resolves.toBe(true);
+  });
+
+  it("allows a direct exam grant without granting the whole subject", async () => {
+    const data = cloneDemoData();
+    data.accessGrants = [
+      {
+        ...data.accessGrants[0],
+        grantee_type: "user",
+        grantee_id: demoIds.student,
+        resource_type: "exam",
+        resource_id: demoIds.exam,
+        permission: "view"
+      }
+    ];
+
+    await expect(
+      canAccessResource({ userId: demoIds.student, resourceType: "exam", resourceId: demoIds.exam, permission: "view", now }, data)
+    ).resolves.toBe(true);
+    await expect(
+      canAccessResource({ userId: demoIds.student, resourceType: "subject", resourceId: demoIds.subject, permission: "view", now }, data)
+    ).resolves.toBe(false);
+  });
+
   it("allows direct chapter grant to access that chapter", async () => {
     const data = cloneDemoData();
     data.accessGrants = [
@@ -104,6 +143,12 @@ describe("permission resolver", () => {
     archived.recordings[0].status = "archived";
     await expect(
       canAccessResource({ userId: demoIds.student, resourceType: "recording", resourceId: demoIds.recording, permission: "view", now }, archived)
+    ).resolves.toBe(false);
+
+    const draftExam = cloneDemoData();
+    draftExam.exams[0].status = "ready";
+    await expect(
+      canAccessResource({ userId: demoIds.student, resourceType: "exam", resourceId: demoIds.exam, permission: "view", now }, draftExam)
     ).resolves.toBe(false);
   });
 

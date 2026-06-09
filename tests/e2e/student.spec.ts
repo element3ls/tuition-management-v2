@@ -15,9 +15,10 @@ async function login(page: Page, email: string) {
 test("student can browse assigned content, search, and open material", async ({ page }) => {
   await login(page, studentEmail);
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await page.getByText("Mathematics").click();
+  await page.getByRole("link", { name: "Mathematics", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Mathematics" })).toBeVisible();
-  await page.getByText("Linear Equations").click();
+  await expect(page.getByRole("link", { name: "Linear Equations Practice Exam" })).toBeVisible();
+  await page.getByRole("link", { name: "Linear Equations", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Linear Equations" })).toBeVisible();
   await page.getByText("Solving 2x + 5 = 17").click();
   await expect(page.getByRole("heading", { name: "Solving 2x + 5 = 17" })).toBeVisible();

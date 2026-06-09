@@ -20,13 +20,15 @@ export default async function AccessPage() {
             ? data.questions.find((item) => item.id === id)?.title
             : type === "recording"
               ? data.recordings.find((item) => item.id === id)?.title
-              : data.solutionMaterials.find((item) => item.id === id)?.title;
+              : type === "exam"
+                ? data.exams.find((item) => item.id === id)?.title
+                : data.solutionMaterials.find((item) => item.id === id)?.title;
 
   return (
     <>
       <PageHeading
         title="Access grants"
-        description="Grant direct or group access to syllabus resources and private materials."
+        description="Grant direct or group access to syllabus resources, exams, and private materials."
         actions={
           <AdminDialog title="Create access grant" trigger={<CreateButton>New grant</CreateButton>}>
             <AccessGrantForm data={data} />

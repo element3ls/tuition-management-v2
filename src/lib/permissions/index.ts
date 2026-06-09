@@ -4,6 +4,7 @@ import type {
   AccessGrant,
   AppData,
   Chapter,
+  Exam,
   PermissionLevel,
   Question,
   Recording,
@@ -15,7 +16,7 @@ import type {
 } from "@/types/domain";
 import { adminRoles, hasAnyRole } from "@/lib/auth/roles";
 
-type ResourceRecord = Year | Subject | Chapter | Question | Recording | SolutionMaterial;
+type ResourceRecord = Year | Subject | Chapter | Question | Recording | SolutionMaterial | Exam;
 
 type ResourceRef = {
   resourceType: ResourceType;
@@ -66,6 +67,8 @@ function getResource(data: AppData, resourceType: ResourceType, resourceId: stri
       return data.recordings.find((item) => item.id === resourceId) ?? null;
     case "solution_material":
       return data.solutionMaterials.find((item) => item.id === resourceId) ?? null;
+    case "exam":
+      return data.exams.find((item) => item.id === resourceId) ?? null;
   }
 }
 
@@ -83,6 +86,8 @@ function getResourceList(data: AppData, resourceType: ResourceType): ResourceRec
       return data.recordings;
     case "solution_material":
       return data.solutionMaterials;
+    case "exam":
+      return data.exams;
   }
 }
 
@@ -117,6 +122,15 @@ function parentRefs(data: AppData, resourceType: ResourceType, resourceId: strin
     return [
       { resourceType: "chapter", resourceId: question.chapter_id },
       ...(chapter ? [{ resourceType: "subject" as const, resourceId: chapter.subject_id }] : []),
+      ...(subject ? [{ resourceType: "year" as const, resourceId: subject.year_id }] : [])
+    ];
+  }
+
+  if (resourceType === "exam") {
+    const exam = resource as Exam;
+    const subject = data.subjects.find((item) => item.id === exam.subject_id);
+    return [
+      { resourceType: "subject", resourceId: exam.subject_id },
       ...(subject ? [{ resourceType: "year" as const, resourceId: subject.year_id }] : [])
     ];
   }

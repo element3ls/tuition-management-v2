@@ -104,12 +104,12 @@ values ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-0000000
 on conflict (id) do update set title = excluded.title, description = excluded.description, status = excluded.status;
 
 insert into public.exams (
-  id, chapter_id, title, description, source_bucket, source_key, source_file_name, source_mime_type,
+  id, subject_id, title, description, source_bucket, source_key, source_file_name, source_mime_type,
   source_size_bytes, status, ai_model, uploaded_by, approved_by, approved_at, published_at
 )
 values (
   '72000000-0000-4000-8000-000000000001',
-  '40000000-0000-4000-8000-000000000001',
+  '30000000-0000-4000-8000-000000000001',
   'Linear Equations Practice Exam',
   'Reviewed questions and worked answers.',
   'exam-sources',
@@ -126,11 +126,19 @@ values (
 )
 on conflict (id) do update
 set title = excluded.title,
+    subject_id = excluded.subject_id,
     description = excluded.description,
     status = excluded.status,
     approved_by = excluded.approved_by,
     approved_at = excluded.approved_at,
     published_at = excluded.published_at;
+
+insert into public.exam_chapters (exam_id, chapter_id)
+values (
+  '72000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001'
+)
+on conflict (exam_id, chapter_id) do nothing;
 
 insert into public.exam_questions (
   id, exam_id, question_number, question_text, answer_text, marks, source_pages, sort_order

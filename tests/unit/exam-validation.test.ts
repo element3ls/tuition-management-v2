@@ -8,7 +8,8 @@ import {
 
 describe("exam intake validation", () => {
   const validUpload = {
-    chapterId: "40000000-0000-4000-8000-000000000001",
+    subjectId: "30000000-0000-4000-8000-000000000001",
+    chapterIds: ["40000000-0000-4000-8000-000000000001"],
     title: "Practice exam",
     description: null,
     fileName: "paper.pdf",
@@ -23,6 +24,10 @@ describe("exam intake validation", () => {
   it("rejects non-PDF files and oversized files", () => {
     expect(examUploadInputSchema.safeParse({ ...validUpload, mimeType: "image/png" }).success).toBe(false);
     expect(examUploadInputSchema.safeParse({ ...validUpload, sizeBytes: maxExamFileSizeBytes + 1 }).success).toBe(false);
+  });
+
+  it("requires at least one covered chapter", () => {
+    expect(examUploadInputSchema.safeParse({ ...validUpload, chapterIds: [] }).success).toBe(false);
   });
 
   it("sanitizes storage names and validates reviewed questions", () => {

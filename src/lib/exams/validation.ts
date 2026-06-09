@@ -4,7 +4,8 @@ export const examSourceBucket = "exam-sources";
 export const maxExamFileSizeBytes = 50 * 1024 * 1024;
 
 export const examUploadInputSchema = z.object({
-  chapterId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+  chapterIds: z.array(z.string().uuid()).min(1).max(50).transform((ids) => [...new Set(ids)]),
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).nullable().optional(),
   fileName: z.string().trim().min(1).max(255),

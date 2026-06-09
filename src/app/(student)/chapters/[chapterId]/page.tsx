@@ -22,8 +22,24 @@ export default async function ChapterPage({ params }: { params: Promise<{ chapte
   const questions = data.questions.filter((question) => question.chapter_id === chapterId && question.status === "published").sort(bySortOrderThenName);
   const recordings = data.recordings.filter((recording) => recording.chapter_id === chapterId && recording.status === "published").sort(bySortOrderThenName);
   const materials = data.solutionMaterials.filter((material) => material.chapter_id === chapterId && material.status === "published").sort(bySortOrderThenName);
-  const exams = data.exams
-    .filter((exam) => exam.chapter_id === chapterId && exam.status === "published")
+  const linkedExamIds = new Set(
+    data.examChapters.filter((link) => link.chapter_id === chapterId).map((link) => link.exam_id)
+  );
+  const exams = (
+    await Promise.all(
+      data.exams
+        .filter((exam) => linkedExamIds.has(exam.id) && exam.status === "published")
+        .map(async (exam) => ({
+          exam,
+          allowed: await canAccessResource(
+            { userId: user.id, resourceType: "exam", resourceId: exam.id, permission: "view" },
+            data
+          )
+        }))
+    )
+  )
+    .filter((item) => item.allowed)
+    .map((item) => item.exam)
     .sort((a, b) => a.title.localeCompare(b.title));
 
   return (

@@ -13,7 +13,13 @@ export default async function ExamReviewPage({ params }: { params: Promise<{ exa
   const exam = data.exams.find((item) => item.id === examId);
   if (!exam) notFound();
 
-  const chapter = data.chapters.find((item) => item.id === exam.chapter_id);
+  const subject = data.subjects.find((item) => item.id === exam.subject_id);
+  const chapterIds = data.examChapters
+    .filter((link) => link.exam_id === exam.id)
+    .map((link) => link.chapter_id);
+  const chapterTitles = data.chapters
+    .filter((chapter) => chapterIds.includes(chapter.id))
+    .map((chapter) => chapter.title);
   const questions = data.examQuestions
     .filter((question) => question.exam_id === exam.id)
     .sort((a, b) => a.sort_order - b.sort_order);
@@ -22,10 +28,14 @@ export default async function ExamReviewPage({ params }: { params: Promise<{ exa
 
   return (
     <>
-      <PageHeading title={exam.title} description={exam.description ?? `Exam under ${chapter?.title ?? "unknown chapter"}`} />
+      <PageHeading title={exam.title} description={exam.description ?? `Exam under ${subject?.name ?? "unknown subject"}`} />
       <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
         <StatusBadge status={exam.status} />
         <span className="text-muted-foreground">{exam.source_file_name}</span>
+        <span className="text-muted-foreground">Subject: {subject?.name ?? "Unknown"}</span>
+        <span className="text-muted-foreground">
+          Chapters: {chapterTitles.length > 0 ? chapterTitles.join(", ") : "None"}
+        </span>
         {exam.ai_model ? <span className="text-muted-foreground">Model: {exam.ai_model}</span> : null}
       </div>
       {exam.ai_error ? <Alert variant="destructive" className="mb-4">{exam.ai_error}</Alert> : null}

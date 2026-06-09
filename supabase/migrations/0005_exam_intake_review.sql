@@ -38,7 +38,19 @@ create table if not exists public.exam_questions (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_exams_chapter_id on public.exams(chapter_id);
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'exams'
+      and column_name = 'chapter_id'
+  ) then
+    create index if not exists idx_exams_chapter_id on public.exams(chapter_id);
+  end if;
+end
+$$;
 create index if not exists idx_exams_status on public.exams(status);
 create index if not exists idx_exam_questions_exam_id on public.exam_questions(exam_id);
 

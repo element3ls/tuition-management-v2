@@ -22,10 +22,48 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
     .filter((chapter) => chapter.subject_id === subjectId)
     .filter((chapter) => chapter.status === "published")
     .sort(bySortOrderThenName);
+  const exams = (
+    await Promise.all(
+      data.exams
+        .filter((exam) => exam.subject_id === subjectId && exam.status === "published")
+        .map(async (exam) => ({
+          exam,
+          allowed: await canAccessResource(
+            { userId: user.id, resourceType: "exam", resourceId: exam.id, permission: "view" },
+            data
+          )
+        }))
+    )
+  )
+    .filter((item) => item.allowed)
+    .map((item) => item.exam)
+    .sort((a, b) => a.title.localeCompare(b.title));
 
   return (
     <>
       <PageHeading title={subject.name} description={subject.description} />
+      {exams.length > 0 ? (
+        <section className="mb-6">
+          <h2 className="mb-3 text-lg font-semibold">Exams</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {exams.map((exam) => (
+              <Card key={exam.id}>
+                <CardHeader>
+                  <CardTitle>
+                    <Link href={`/exams/${exam.id}`}>{exam.title}</Link>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    {exam.description ?? "Reviewed questions and worked answers"}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      <h2 className="mb-3 text-lg font-semibold">Chapters</h2>
       <div className="grid gap-4 md:grid-cols-2">
         {chapters.map((chapter) => (
           <Card key={chapter.id}>

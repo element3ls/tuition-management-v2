@@ -19,7 +19,8 @@ const resourceTypes: Array<{ value: ResourceType; label: string }> = [
   { value: "chapter", label: "Chapter" },
   { value: "question", label: "Question" },
   { value: "recording", label: "Recording" },
-  { value: "solution_material", label: "Solution material" }
+  { value: "solution_material", label: "Solution material" },
+  { value: "exam", label: "Exam" }
 ];
 
 export function AccessGrantForm({ data }: { data: AppData }) {
@@ -45,8 +46,9 @@ export function AccessGrantForm({ data }: { data: AppData }) {
     if (resourceType === "chapter") return data.chapters.map((chapter) => ({ id: chapter.id, label: chapter.title }));
     if (resourceType === "question") return data.questions.map((question) => ({ id: question.id, label: question.title }));
     if (resourceType === "recording") return data.recordings.map((recording) => ({ id: recording.id, label: recording.title }));
+    if (resourceType === "exam") return data.exams.map((exam) => ({ id: exam.id, label: exam.title }));
     return data.solutionMaterials.map((material) => ({ id: material.id, label: material.title }));
-  }, [data.chapters, data.questions, data.recordings, data.solutionMaterials, data.subjects, data.years, resourceType]);
+  }, [data.chapters, data.exams, data.questions, data.recordings, data.solutionMaterials, data.subjects, data.years, resourceType]);
 
   const togglePermission = (permission: PermissionLevel) => {
     setPermissionError(null);
@@ -54,6 +56,8 @@ export function AccessGrantForm({ data }: { data: AppData }) {
       current.includes(permission) ? current.filter((item) => item !== permission) : [...current, permission]
     );
   };
+
+  const availablePermissions: PermissionLevel[] = resourceType === "exam" ? ["view"] : ["view", "download"];
 
   return (
     <form
@@ -82,7 +86,15 @@ export function AccessGrantForm({ data }: { data: AppData }) {
         </Select>
       </Field>
       <Field label="Resource type">
-        <Select name="resource_type" value={resourceType} onChange={(event) => setResourceType(event.target.value as ResourceType)}>
+        <Select
+          name="resource_type"
+          value={resourceType}
+          onChange={(event) => {
+            const nextResourceType = event.target.value as ResourceType;
+            setResourceType(nextResourceType);
+            if (nextResourceType === "exam") setSelectedPermissions(["view"]);
+          }}
+        >
           {resourceTypes.map((type) => (
             <option key={type.value} value={type.value}>
               {type.label}
@@ -102,7 +114,7 @@ export function AccessGrantForm({ data }: { data: AppData }) {
       <div className="grid gap-1.5 text-sm font-medium text-foreground">
         <span>Permissions</span>
         <div className="grid gap-2 rounded-md border border-border/70 bg-background/60 p-3">
-          {(["view", "download"] satisfies PermissionLevel[]).map((permission) => (
+          {availablePermissions.map((permission) => (
             <label key={permission} className="flex items-center gap-2 text-sm font-medium capitalize text-foreground">
               <input
                 name="permission"

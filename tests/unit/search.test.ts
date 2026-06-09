@@ -9,12 +9,14 @@ describe("searchAccessibleContent", () => {
     const denied = await searchAccessibleContent({ userId: demoIds.otherStudent, query: "equations", data });
 
     expect(allowed.map((result) => result.title)).toContain("Linear Equations");
+    expect(allowed.map((result) => result.title)).toContain("Linear Equations Practice Exam");
     expect(denied).toEqual([]);
   });
 
   it("does not return unpublished content", async () => {
     const data = cloneDemoData();
     data.chapters[0].status = "draft";
+    data.exams[0].status = "ready";
 
     await expect(searchAccessibleContent({ userId: demoIds.student, query: "linear", data })).resolves.toEqual([]);
   });

@@ -27,7 +27,7 @@ export default async function ExamsPage({
             description="The source stays private and is never shown to students."
             trigger={<CreateButton disabled={!isSupabaseConfigured()}>Upload exam</CreateButton>}
           >
-            <ExamUploadForm chapters={data.chapters} />
+            <ExamUploadForm subjects={data.subjects} chapters={data.chapters} />
           </AdminDialog>
         }
       />
@@ -41,7 +41,7 @@ export default async function ExamsPage({
           <TableHeader>
             <TableRow>
               <TableHead>Exam</TableHead>
-              <TableHead>Chapter</TableHead>
+              <TableHead>Subject / coverage</TableHead>
               <TableHead>Questions</TableHead>
               <TableHead>Updated</TableHead>
               <TableHead>Status</TableHead>
@@ -51,7 +51,13 @@ export default async function ExamsPage({
           <TableBody>
             {data.exams.length === 0 ? <EmptyTable colSpan={6} label="No exams uploaded yet." /> : null}
             {data.exams.map((exam) => {
-              const chapter = data.chapters.find((item) => item.id === exam.chapter_id);
+              const subject = data.subjects.find((item) => item.id === exam.subject_id);
+              const chapterIds = data.examChapters
+                .filter((link) => link.exam_id === exam.id)
+                .map((link) => link.chapter_id);
+              const chapterTitles = data.chapters
+                .filter((chapter) => chapterIds.includes(chapter.id))
+                .map((chapter) => chapter.title);
               const questionCount = data.examQuestions.filter((question) => question.exam_id === exam.id).length;
               return (
                 <TableRow key={exam.id}>
@@ -59,7 +65,12 @@ export default async function ExamsPage({
                     <div className="font-medium">{exam.title}</div>
                     <div className="text-xs text-muted-foreground">{exam.source_file_name}</div>
                   </TableCell>
-                  <TableCell>{chapter?.title ?? "Unknown chapter"}</TableCell>
+                  <TableCell>
+                    <div className="font-medium">{subject?.name ?? "Unknown subject"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {chapterTitles.length > 0 ? chapterTitles.join(", ") : "No chapter coverage"}
+                    </div>
+                  </TableCell>
                   <TableCell>{questionCount}</TableCell>
                   <TableCell>{formatDistanceToNow(new Date(exam.updated_at), { addSuffix: true })}</TableCell>
                   <TableCell><StatusBadge status={exam.status} /></TableCell>

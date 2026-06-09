@@ -23,6 +23,7 @@ const requiredTables = [
   "recordings",
   "solution_materials",
   "exams",
+  "exam_chapters",
   "exam_questions",
   "access_grants",
   "tags",

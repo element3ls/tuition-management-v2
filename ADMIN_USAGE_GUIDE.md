@@ -131,7 +131,7 @@ To allow downloading, mark the material downloadable and grant `download` permis
 
 Go to `/admin/exams`.
 
-1. Select a chapter, enter an exam title, and upload a PDF.
+1. Select a subject and one or more covered chapters, enter an exam title, and upload a PDF.
 2. Open the new exam and confirm the private source PDF is readable.
 3. Select **Generate questions and answers**.
 4. Wait for processing to finish. You can leave and revisit the page while it runs.
@@ -141,7 +141,7 @@ Go to `/admin/exams`.
 8. Clear every review warning after resolving it.
 9. Select **Approve and publish entire exam** only when every answer is ready.
 
-Published exams appear to students who can view the parent chapter. Students never receive the source PDF. Published exams are read-only, so corrections require uploading a revised exam rather than silently changing approved answers.
+Published exams appear on the subject page and on each selected chapter page. Access normally inherits from the subject or year; use a direct exam access grant only for an exceptional release. Students never receive the source PDF. Published exams are read-only, so corrections require uploading a revised exam rather than silently changing approved answers.
 
 The student viewer uses personalized watermarks and blocks common copy, right-click, save, and print actions. These are deterrents only and cannot guarantee protection from screenshots, cameras, OCR, or technical extraction.
 

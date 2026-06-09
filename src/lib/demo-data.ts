@@ -185,7 +185,7 @@ export const demoData: AppData = {
   exams: [
     {
       id: demoIds.exam,
-      chapter_id: demoIds.chapter,
+      subject_id: demoIds.subject,
       title: "Linear Equations Practice Exam",
       description: "Reviewed questions and worked answers.",
       source_bucket: "exam-sources",
@@ -205,6 +205,13 @@ export const demoData: AppData = {
       published_at: now,
       created_at: now,
       updated_at: now
+    }
+  ],
+  examChapters: [
+    {
+      exam_id: demoIds.exam,
+      chapter_id: demoIds.chapter,
+      created_at: now
     }
   ],
   examQuestions: [

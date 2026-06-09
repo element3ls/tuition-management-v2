@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tuition Management System Relationship Diagram</title>
+    <style>
+      @page {
+        size: A4 landscape;
+        margin: 12mm;
+      }
+
+      :root {
+        --ink: #172033;
+        --muted: #5c667a;
+        --line: #c9d1df;
+        --admin: #ffe2b6;
+        --student: #ccebdd;
+        --content: #dce7ff;
+        --access: #f4d6ef;
+        --data: #e9e3d4;
+        --surface: #ffffff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: #f5f7fb;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .page {
+        width: 273mm;
+        min-height: 186mm;
+        margin: 0 auto;
+        background: var(--surface);
+        padding: 9mm 10mm;
+      }
+
+      header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 10px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(2, auto);
+        gap: 6px 14px;
+        color: var(--muted);
+        font-size: 10px;
+        white-space: nowrap;
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .swatch {
+        width: 12px;
+        height: 12px;
+        border: 1px solid #9ca7b8;
+        border-radius: 3px;
+        display: inline-block;
+      }
+
+      .diagram-wrap {
+        padding-top: 12px;
+      }
+
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .box {
+        fill: #fff;
+        stroke: #97a3b6;
+        stroke-width: 1.2;
+      }
+
+      .admin {
+        fill: var(--admin);
+      }
+
+      .student {
+        fill: var(--student);
+      }
+
+      .content {
+        fill: var(--content);
+      }
+
+      .access {
+        fill: var(--access);
+      }
+
+      .data {
+        fill: var(--data);
+      }
+
+      .label {
+        fill: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .small {
+        fill: var(--muted);
+        font-size: 10px;
+        font-weight: 400;
+      }
+
+      .connector {
+        fill: none;
+        stroke: #7c8799;
+        stroke-width: 1.4;
+        marker-end: url(#arrow);
+      }
+
+      .soft {
+        stroke: #aab3c3;
+        stroke-width: 1.1;
+      }
+
+      .explanation {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 16px;
+        margin-top: 10px;
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+      }
+
+      h2 {
+        margin: 0 0 6px;
+        font-size: 14px;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+        color: #283448;
+        font-size: 11.2px;
+        line-height: 1.48;
+      }
+
+      .callouts {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .callout {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 8px;
+        min-height: 68px;
+      }
+
+      .callout strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 11.5px;
+      }
+
+      .callout p {
+        color: var(--muted);
+        font-size: 10.4px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <div>
+          <h1>Tuition Management System Relationship Diagram</h1>
+          <p class="subtitle">How syllabus content, exams, access, and the student experience work together.</p>
+        </div>
+        <div class="legend" aria-label="Legend">
+          <span><i class="swatch" style="background: var(--admin)"></i>Admin tools</span>
+          <span><i class="swatch" style="background: var(--student)"></i>Student experience</span>
+          <span><i class="swatch" style="background: var(--content)"></i>Learning content</span>
+          <span><i class="swatch" style="background: var(--access)"></i>Access control</span>
+          <span><i class="swatch" style="background: var(--data)"></i>Storage and logs</span>
+        </div>
+      </header>
+
+      <section class="diagram-wrap" aria-label="Relationship diagram">
+        <svg viewBox="0 0 1080 470" role="img" aria-labelledby="diagram-title diagram-desc">
+          <title id="diagram-title">System module relationship diagram</title>
+          <desc id="diagram-desc">
+            Users log in, role checks route admins to management tools and students to learning pages.
+            Exams belong to subjects, can cover multiple chapters, and publish reviewed questions and answers
+            while their source PDFs remain private.
+          </desc>
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c8799"></path>
+            </marker>
+          </defs>
+
+          <rect class="box" x="458" y="12" width="164" height="46" rx="8"></rect>
+          <text class="label" x="540" y="32" text-anchor="middle">User logs in</text>
+          <text class="small" x="540" y="47" text-anchor="middle">email and password</text>
+
+          <rect class="box access" x="442" y="82" width="196" height="50" rx="8"></rect>
+          <text class="label" x="540" y="104" text-anchor="middle">Login and role check</text>
+          <text class="small" x="540" y="119" text-anchor="middle">admin, teacher, or student</text>
+          <path class="connector" d="M 540 58 L 540 82"></path>
+
+          <rect class="box admin" x="120" y="158" width="168" height="50" rx="8"></rect>
+          <text class="label" x="204" y="180" text-anchor="middle">Admin Area</text>
+          <text class="small" x="204" y="195" text-anchor="middle">manage and publish</text>
+
+          <rect class="box student" x="804" y="158" width="168" height="50" rx="8"></rect>
+          <text class="label" x="888" y="180" text-anchor="middle">Student Area</text>
+          <text class="small" x="888" y="195" text-anchor="middle">view assigned content</text>
+
+          <path class="connector" d="M 442 107 C 350 107 300 132 245 158"></path>
+          <path class="connector" d="M 638 107 C 735 107 792 132 847 158"></path>
+
+          <rect class="box admin" x="15" y="238" width="112" height="44" rx="7"></rect>
+          <text class="label" x="71" y="256" text-anchor="middle">Students</text>
+          <text class="small" x="71" y="270" text-anchor="middle">profiles and roles</text>
+
+          <rect class="box admin" x="145" y="238" width="112" height="44" rx="7"></rect>
+          <text class="label" x="201" y="256" text-anchor="middle">Groups</text>
+          <text class="small" x="201" y="270" text-anchor="middle">classes or cohorts</text>
+
+          <rect class="box content" x="275" y="238" width="112" height="44" rx="7"></rect>
+          <text class="label" x="331" y="256" text-anchor="middle">Content</text>
+          <text class="small" x="331" y="270" text-anchor="middle">syllabus structure</text>
+
+          <rect class="box content" x="405" y="238" width="112" height="44" rx="7"></rect>
+          <text class="label" x="461" y="256" text-anchor="middle">Exams</text>
+          <text class="small" x="461" y="270" text-anchor="middle">AI review workflow</text>
+
+          <rect class="box content" x="535" y="238" width="112" height="44" rx="7"></rect>
+          <text class="label" x="591" y="256" text-anchor="middle">Recordings</text>
+          <text class="small" x="591" y="270" text-anchor="middle">YouTube lessons</text>
+
+          <rect class="box content" x="665" y="238" width="112" height="44" rx="7"></rect>
+          <text class="label" x="721" y="256" text-anchor="middle">Materials</text>
+          <text class="small" x="721" y="270" text-anchor="middle">solution files</text>
+
+          <rect class="box access" x="795" y="238" width="112" height="44" rx="7"></rect>
+          <text class="label" x="851" y="256" text-anchor="middle">Access Rules</text>
+          <text class="small" x="851" y="270" text-anchor="middle">who can see what</text>
+
+          <rect class="box data" x="925" y="238" width="112" height="44" rx="7"></rect>
+          <text class="label" x="981" y="256" text-anchor="middle">Audit Logs</text>
+          <text class="small" x="981" y="270" text-anchor="middle">admin changes</text>
+
+          <path class="connector soft" d="M 188 208 C 150 218 105 226 71 238"></path>
+          <path class="connector soft" d="M 198 208 L 201 238"></path>
+          <path class="connector soft" d="M 225 208 C 260 218 305 226 331 238"></path>
+          <path class="connector soft" d="M 250 208 C 320 218 415 226 461 238"></path>
+          <path class="connector soft" d="M 270 208 C 380 216 540 224 591 238"></path>
+          <path class="connector soft" d="M 282 204 C 455 210 670 221 721 238"></path>
+          <path class="connector soft" d="M 288 196 C 555 198 805 220 851 238"></path>
+          <path class="connector soft" d="M 288 187 C 655 187 940 214 981 238"></path>
+
+          <rect class="box data" x="18" y="335" width="190" height="42" rx="8"></rect>
+          <text class="label" x="113" y="353" text-anchor="middle">Supabase</text>
+          <text class="small" x="113" y="367" text-anchor="middle">database, login, private storage</text>
+
+          <rect class="box data" x="18" y="405" width="190" height="42" rx="8"></rect>
+          <text class="label" x="113" y="423" text-anchor="middle">Staff-only Exam PDF</text>
+          <text class="small" x="113" y="437" text-anchor="middle">private source reference</text>
+
+          <path class="connector soft" d="M 71 282 C 72 307 84 324 99 335"></path>
+          <path class="connector soft" d="M 201 282 C 188 307 160 325 138 335"></path>
+          <path class="connector soft" d="M 981 282 C 810 303 330 323 208 352"></path>
+          <path class="connector" d="M 113 377 L 113 405"></path>
+
+          <rect class="box content" x="245" y="335" width="90" height="38" rx="7"></rect>
+          <text class="label" x="290" y="358" text-anchor="middle">Year</text>
+          <rect class="box content" x="365" y="335" width="100" height="38" rx="7"></rect>
+          <text class="label" x="415" y="358" text-anchor="middle">Subject</text>
+          <rect class="box content" x="505" y="335" width="100" height="38" rx="7"></rect>
+          <text class="label" x="555" y="358" text-anchor="middle">Chapter</text>
+          <rect class="box content" x="645" y="335" width="100" height="38" rx="7"></rect>
+          <text class="label" x="695" y="358" text-anchor="middle">Question</text>
+
+          <path class="connector" d="M 335 354 L 365 354"></path>
+          <path class="connector" d="M 465 354 L 505 354"></path>
+          <path class="connector" d="M 605 354 L 645 354"></path>
+          <path class="connector soft" d="M 331 282 L 297 335"></path>
+          <path class="connector soft" d="M 591 282 C 585 305 571 322 561 335"></path>
+          <path class="connector soft" d="M 721 282 C 715 305 705 322 700 335"></path>
+
+          <rect class="box content" x="365" y="405" width="100" height="42" rx="7"></rect>
+          <text class="label" x="415" y="423" text-anchor="middle">Exam</text>
+          <text class="small" x="415" y="437" text-anchor="middle">belongs to subject</text>
+
+          <rect class="box content" x="505" y="405" width="115" height="42" rx="7"></rect>
+          <text class="label" x="562.5" y="423" text-anchor="middle">Exam Chapters</text>
+          <text class="small" x="562.5" y="437" text-anchor="middle">one or more links</text>
+
+          <rect class="box content" x="650" y="405" width="120" height="42" rx="7"></rect>
+          <text class="label" x="710" y="423" text-anchor="middle">Published Q&amp;A</text>
+          <text class="small" x="710" y="437" text-anchor="middle">student-facing output</text>
+
+          <path class="connector" d="M 415 373 L 415 405"></path>
+          <path class="connector" d="M 465 426 L 505 426"></path>
+          <path class="connector" d="M 562 405 C 562 390 558 382 556 373"></path>
+          <path class="connector" d="M 465 440 C 530 466 615 466 650 440"></path>
+          <path class="connector soft" d="M 405 282 C 414 320 414 370 415 405"></path>
+          <path class="connector" d="M 208 426 L 365 426"></path>
+
+          <rect class="box access" x="790" y="335" width="120" height="46" rx="7"></rect>
+          <text class="label" x="850" y="353" text-anchor="middle">Permission Check</text>
+          <text class="small" x="850" y="367" text-anchor="middle">subject inheritance</text>
+          <text class="small" x="850" y="378" text-anchor="middle">or direct exam grant</text>
+          <path class="connector" d="M 851 282 L 850 335"></path>
+          <path class="connector soft" d="M 745 354 L 790 354"></path>
+          <path class="connector soft" d="M 770 426 C 800 414 815 395 830 381"></path>
+
+          <rect class="box student" x="940" y="315" width="126" height="30" rx="7"></rect>
+          <text class="small" x="1003" y="334" text-anchor="middle">Dashboard / search</text>
+          <rect class="box student" x="940" y="355" width="126" height="30" rx="7"></rect>
+          <text class="small" x="1003" y="374" text-anchor="middle">Subject and chapters</text>
+          <rect class="box student" x="940" y="395" width="126" height="30" rx="7"></rect>
+          <text class="small" x="1003" y="414" text-anchor="middle">Protected exam view</text>
+          <path class="connector" d="M 910 358 C 925 345 928 335 940 330"></path>
+          <path class="connector" d="M 910 358 L 940 370"></path>
+          <path class="connector" d="M 910 358 C 928 380 930 398 940 410"></path>
+          <path class="connector soft" d="M 888 208 L 888 300 C 888 318 876 329 866 335"></path>
+        </svg>
+      </section>
+
+      <section class="explanation">
+        <div>
+          <h2>How To Read This</h2>
+          <p>
+            The Content module owns the syllabus hierarchy: Year to Subject to Chapter to Question.
+            The Exam module is a separate publishing workflow because it has a private source PDF,
+            AI processing, staff review, approval, and student-facing questions and answers. Each
+            exam belongs to one subject and can be linked to one or more relevant chapters.
+          </p>
+          <p style="margin-top: 6px">
+            Students do not automatically see everything. When a student logs in, the system checks
+            their account, group memberships, and access rules. Exam access normally inherits from
+            the year or subject, while a direct exam grant supports exceptional releases. Published
+            exams appear primarily on the subject page and secondarily on linked chapter pages.
+          </p>
+        </div>
+        <div class="callouts">
+          <div class="callout">
+            <strong>Access is central</strong>
+            <p>Year and subject grants flow down to exams. Direct exam grants are available when needed.</p>
+          </div>
+          <div class="callout">
+            <strong>Files stay private</strong>
+            <p>Exam source PDFs stay staff-only. Students receive only reviewed and published Q&amp;A.</p>
+          </div>
+          <div class="callout">
+            <strong>Logs create visibility</strong>
+            <p>Admin changes are audited, while student actions such as viewing exams are tracked.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -18,7 +18,7 @@ import {
 import { createStudentAccount } from "@/features/admin/students";
 
 const statusSchema = z.enum(["draft", "published", "archived"]);
-const resourceTypeSchema = z.enum(["year", "subject", "chapter", "question", "recording", "solution_material"]);
+const resourceTypeSchema = z.enum(["year", "subject", "chapter", "question", "recording", "solution_material", "exam"]);
 const membershipStatusSchema = z.enum(["active", "inactive"]);
 const transcriptSourceSchema = z.enum(["none", "manual", "youtube", "generated"]);
 const transcriptReviewStatusSchema = z.enum(["draft", "reviewed", "approved"]);

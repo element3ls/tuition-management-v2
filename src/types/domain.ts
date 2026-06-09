@@ -8,7 +8,8 @@ export type ResourceType =
   | "chapter"
   | "question"
   | "recording"
-  | "solution_material";
+  | "solution_material"
+  | "exam";
 
 export type PermissionLevel = "view" | "download";
 
@@ -184,7 +185,7 @@ export type SolutionMaterial = {
 
 export type Exam = {
   id: string;
-  chapter_id: string;
+  subject_id: string;
   title: string;
   description: string | null;
   source_bucket: string;
@@ -204,6 +205,12 @@ export type Exam = {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ExamChapter = {
+  exam_id: string;
+  chapter_id: string;
+  created_at: string;
 };
 
 export type ExamQuestion = {
@@ -245,7 +252,7 @@ export type Tag = {
 export type ContentTag = {
   id: string;
   tag_id: string;
-  resource_type: Extract<ResourceType, "chapter" | "question" | "recording" | "solution_material">;
+  resource_type: Extract<ResourceType, "chapter" | "question" | "recording" | "solution_material" | "exam">;
   resource_id: string;
 };
 
@@ -283,6 +290,7 @@ export type AppData = {
   recordings: Recording[];
   solutionMaterials: SolutionMaterial[];
   exams: Exam[];
+  examChapters: ExamChapter[];
   examQuestions: ExamQuestion[];
   accessGrants: AccessGrant[];
   tags: Tag[];
@@ -310,7 +318,7 @@ export type AccessibleContentTree = {
 };
 
 export type SearchResult = {
-  type: Extract<ResourceType, "chapter" | "question" | "recording" | "solution_material">;
+  type: Extract<ResourceType, "chapter" | "question" | "recording" | "solution_material" | "exam">;
   id: string;
   title: string;
   description: string | null;

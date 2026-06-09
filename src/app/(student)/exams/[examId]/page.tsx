@@ -15,7 +15,7 @@ export default async function StudentExamPage({ params }: { params: Promise<{ ex
   if (!exam) notFound();
 
   const allowed = await canAccessResource(
-    { userId: user.id, resourceType: "chapter", resourceId: exam.chapter_id, permission: "view" },
+    { userId: user.id, resourceType: "exam", resourceId: exam.id, permission: "view" },
     data
   );
   if (!allowed) return <PageHeading title="Access denied" description="You do not have access to this exam." />;
