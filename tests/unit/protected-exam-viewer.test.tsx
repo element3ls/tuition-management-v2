@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { ProtectedExamViewer } from "@/app/(student)/exams/[examId]/protected-exam-viewer";
+import { ProtectedExamViewer } from "@/components/content/protected-exam-viewer";
 
 describe("protected exam viewer", () => {
   it("blocks casual copy, context-menu, and print shortcuts", () => {

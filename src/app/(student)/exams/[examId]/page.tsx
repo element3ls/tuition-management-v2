@@ -1,13 +1,11 @@
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/layout/page-heading";
-import { RichText } from "@/components/content/rich-text";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExamQuestionList } from "@/components/content/exam-question-list";
+import { ProtectedExamViewer } from "@/components/content/protected-exam-viewer";
 import { requireStudentAccess } from "@/lib/auth/session";
 import { logActivityEvent } from "@/lib/activity/log";
 import { canAccessResource } from "@/lib/permissions";
 import { getAppData } from "@/server/data/app-data";
-import { ProtectedExamViewer } from "@/app/(student)/exams/[examId]/protected-exam-viewer";
 
 export default async function StudentExamPage({ params }: { params: Promise<{ examId: string }> }) {
   const { examId } = await params;
@@ -35,31 +33,21 @@ export default async function StudentExamPage({ params }: { params: Promise<{ ex
   });
 
   const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
-  const watermark = `${user.full_name} • ${user.email} • ${timestamp} UTC`;
+  const watermark = `${user.full_name} | ${user.email} | ${timestamp} UTC`;
 
   return (
     <>
       <PageHeading title={exam.title} description={exam.description} />
       <ProtectedExamViewer watermark={watermark}>
-        <div className="grid gap-5">
-          {questions.map((question) => (
-            <Card key={question.id}>
-              <CardHeader>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <CardTitle>Question {question.question_number}</CardTitle>
-                  {question.marks !== null ? <Badge variant="outline">{question.marks} marks</Badge> : null}
-                </div>
-              </CardHeader>
-              <CardContent className="grid gap-5">
-                <RichText>{question.question_text}</RichText>
-                <section className="rounded-md border border-primary/20 bg-primary/5 p-4">
-                  <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">Worked answer</h2>
-                  <RichText>{question.answer_text}</RichText>
-                </section>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <ExamQuestionList
+          questions={questions.map((question) => ({
+            id: question.id,
+            questionNumber: question.question_number,
+            questionText: question.question_text,
+            answerText: question.answer_text,
+            marks: question.marks
+          }))}
+        />
       </ProtectedExamViewer>
     </>
   );

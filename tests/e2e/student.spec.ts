@@ -58,10 +58,17 @@ test("admin can review a published exam", async ({ page }) => {
   await page.goto("/admin/exams");
   await expect(page.getByRole("heading", { name: "Exam intake" })).toBeVisible();
   await expect(page.getByText("Linear Equations Practice Exam")).toBeVisible();
-  await page.getByRole("link", { name: "Review" }).click();
+  await Promise.all([
+    page.waitForURL(/\/admin\/exams\/72000000-0000-4000-8000-000000000001$/, { timeout: 15_000 }),
+    page.getByRole("link", { name: "Review" }).click()
+  ]);
   await expect(page.getByRole("heading", { name: "Linear Equations Practice Exam" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Questions and worked answers" })).toBeVisible();
   await expect(page.getByText("This exam is published and read-only.")).toBeVisible();
+  await page.getByRole("button", { name: "Student preview" }).click();
+  await expect(page.locator(".protected-exam-content")).toBeVisible();
+  await expect(page.getByText("Question 1", { exact: true })).toBeVisible();
+  await expect(page.getByText("Worked answer").first()).toBeVisible();
 });
 
 test("student can view protected exam questions and worked answers", async ({ page }) => {

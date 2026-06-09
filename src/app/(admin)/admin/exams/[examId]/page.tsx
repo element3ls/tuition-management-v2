@@ -56,7 +56,13 @@ export default async function ExamReviewPage({ params }: { params: Promise<{ exa
                 Review every item against the source PDF. Markdown and LaTeX are supported in the student view.
               </p>
             </div>
-            <ExamReviewEditor examId={exam.id} questions={questions} published={exam.status === "published"} />
+            <ExamReviewEditor
+              examId={exam.id}
+              examTitle={exam.title}
+              examDescription={exam.description}
+              questions={questions}
+              published={exam.status === "published"}
+            />
           </div>
         ) : null}
       </div>
