@@ -61,6 +61,7 @@ try {
     select
       (select count(*)::int from public.roles) as roles,
       (select count(*)::int from public.profiles where email in ('student@example.com', 'admin@example.com')) as profiles,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'must_change_password') as must_change_password_columns,
       (select count(*)::int from public.student_profiles) as student_profiles,
       (select count(*)::int from public.content_groups) as groups,
       (select count(*)::int from public.student_group_memberships where status = 'active') as active_memberships,
@@ -84,6 +85,14 @@ try {
     if (Number(value) < 1) throw new Error(`Verification failed: ${key}=${value}`);
   }
 
+  const { rows: integrityRows } = await client.query(`
+    select count(*)::int as auth_users_without_profiles
+    from auth.users auth_user
+    left join public.profiles profile on profile.id = auth_user.id
+    where profile.id is null;
+  `);
+  const integrity = integrityRows[0];
+
   const { data: signedUrlData, error: signedUrlError } = await supabase.storage
     .from("solution-materials")
     .createSignedUrl("demo/linear-equations-solution.pdf", 60);
@@ -94,6 +103,7 @@ try {
       {
         authUsers: ["student@example.com", "admin@example.com"],
         counts,
+        integrity,
         privateBuckets: ["solution-materials", "exam-sources"],
         signedUrlCreated: true
       },
