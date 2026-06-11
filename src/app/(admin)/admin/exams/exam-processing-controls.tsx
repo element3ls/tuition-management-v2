@@ -5,9 +5,17 @@ import { useRouter } from "next/navigation";
 import { LoaderCircle, Sparkles } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import type { ExamStatus } from "@/types/domain";
+import type { ExamIntakeMode, ExamProcessingStatus } from "@/types/domain";
 
-export function ExamProcessingControls({ examId, initialStatus }: { examId: string; initialStatus: ExamStatus }) {
+export function ExamProcessingControls({
+  examId,
+  intakeMode,
+  initialStatus
+}: {
+  examId: string;
+  intakeMode: ExamIntakeMode;
+  initialStatus: ExamProcessingStatus;
+}) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [busy, setBusy] = useState(false);
@@ -15,14 +23,13 @@ export function ExamProcessingControls({ examId, initialStatus }: { examId: stri
 
   const refreshStatus = useCallback(async () => {
     const response = await fetch(`/api/admin/exams/${examId}/processing`, { cache: "no-store" });
-    const result = (await response.json()) as { status?: ExamStatus; error?: string };
+    const result = (await response.json()) as { status?: ExamProcessingStatus; error?: string };
     if (!response.ok) {
       setError(result.error ?? "Could not refresh processing.");
       return;
     }
-
     if (result.status) setStatus(result.status);
-    if (result.status === "ready" || result.status === "failed") {
+    if (result.status === "completed" || result.status === "failed") {
       setError(result.error ?? null);
       router.refresh();
     }
@@ -35,10 +42,16 @@ export function ExamProcessingControls({ examId, initialStatus }: { examId: stri
   }, [refreshStatus, status]);
 
   const start = async () => {
+    if (
+      status === "completed" &&
+      !window.confirm("Process this exam again? The current draft question set will be replaced when processing completes.")
+    ) {
+      return;
+    }
     setBusy(true);
     setError(null);
     const response = await fetch(`/api/admin/exams/${examId}/processing`, { method: "POST" });
-    const result = (await response.json()) as { status?: ExamStatus; error?: string };
+    const result = (await response.json()) as { status?: ExamProcessingStatus; error?: string };
     setBusy(false);
     if (!response.ok) {
       setError(result.error ?? "Could not start processing.");
@@ -54,12 +67,18 @@ export function ExamProcessingControls({ examId, initialStatus }: { examId: stri
       {status === "processing" ? (
         <Alert className="flex items-center gap-2">
           <LoaderCircle className="size-4 animate-spin" />
-          AI is extracting questions and preparing worked answers. This page will refresh when it finishes.
+          {intakeMode === "teacher_html"
+            ? "AI is transcribing questions only. Teacher HTML answers will be mapped after transcription."
+            : "AI is extracting questions and preparing worked answers."}
         </Alert>
       ) : (
         <Button type="button" onClick={start} disabled={busy}>
           {busy ? <LoaderCircle className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-          {status === "failed" || status === "ready" ? "Process again" : "Generate questions and answers"}
+          {status === "completed" || status === "failed"
+            ? "Process again"
+            : intakeMode === "teacher_html"
+              ? "Transcribe questions"
+              : "Generate questions and answers"}
         </Button>
       )}
     </div>

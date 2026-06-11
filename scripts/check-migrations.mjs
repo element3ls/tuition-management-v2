@@ -25,6 +25,8 @@ const requiredTables = [
   "exams",
   "exam_chapters",
   "exam_questions",
+  "exam_assets",
+  "exam_processing_runs",
   "access_grants",
   "tags",
   "content_tags",

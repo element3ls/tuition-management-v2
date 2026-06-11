@@ -74,10 +74,15 @@ try {
       (select count(*)::int from public.access_grants where revoked_at is null) as active_grants,
       (select count(*)::int from storage.buckets where id = 'solution-materials' and public = false) as private_solution_buckets,
       (select count(*)::int from storage.buckets where id = 'exam-sources' and public = false) as private_exam_buckets,
+      (select count(*)::int from storage.buckets where id = 'exam-assets' and public = false) as private_exam_asset_buckets,
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exams') as exam_tables,
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exam_chapters') as exam_chapter_tables,
       (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exams' and column_name = 'subject_id') as exam_subject_columns,
-      (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exam_questions') as exam_question_tables;
+      (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exam_questions') as exam_question_tables,
+      (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exam_assets') as exam_asset_tables,
+      (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exam_processing_runs') as exam_processing_run_tables,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exams' and column_name = 'intake_mode') as exam_intake_mode_columns,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exams' and column_name = 'processing_status') as exam_processing_status_columns;
   `);
 
   const counts = rows[0];
@@ -104,7 +109,7 @@ try {
         authUsers: ["student@example.com", "admin@example.com"],
         counts,
         integrity,
-        privateBuckets: ["solution-materials", "exam-sources"],
+        privateBuckets: ["solution-materials", "exam-sources", "exam-assets"],
         signedUrlCreated: true
       },
       null,

@@ -19,7 +19,18 @@ export type TranscriptSource = "none" | "manual" | "youtube" | "generated";
 
 export type TranscriptReviewStatus = "draft" | "reviewed" | "approved";
 
-export type ExamStatus = "uploading" | "uploaded" | "processing" | "ready" | "failed" | "published" | "archived";
+export type ExamStatus = "draft" | "review" | "published" | "archived";
+export type ExamProcessingStatus = "idle" | "processing" | "completed" | "failed";
+export type ExamIntakeMode = "ai_solved" | "teacher_html" | "handwritten_images";
+export type ExamContentFormat = "markdown" | "html" | "image";
+export type ExamAssetRole =
+  | "source_pdf"
+  | "answer_html"
+  | "html_image"
+  | "question_image"
+  | "answer_image"
+  | "question_visual"
+  | "answer_visual";
 
 export type ActivityEventType =
   | "login"
@@ -51,6 +62,7 @@ export type AuditAction =
   | "exam_uploaded"
   | "exam_processing_started"
   | "exam_processing_completed"
+  | "exam_asset_uploaded"
   | "exam_updated"
   | "exam_published";
 
@@ -188,12 +200,14 @@ export type Exam = {
   subject_id: string;
   title: string;
   description: string | null;
-  source_bucket: string;
-  source_key: string;
-  source_file_name: string;
-  source_mime_type: string;
-  source_size_bytes: number;
+  source_bucket: string | null;
+  source_key: string | null;
+  source_file_name: string | null;
+  source_mime_type: string | null;
+  source_size_bytes: number | null;
   status: ExamStatus;
+  intake_mode: ExamIntakeMode;
+  processing_status: ExamProcessingStatus;
   ai_model: string | null;
   ai_response_id: string | null;
   ai_error: string | null;
@@ -217,14 +231,63 @@ export type ExamQuestion = {
   id: string;
   exam_id: string;
   question_number: string;
-  question_text: string;
-  answer_text: string;
+  question_text: string | null;
+  answer_text: string | null;
+  question_html: string | null;
+  answer_html: string | null;
+  question_format: ExamContentFormat;
+  answer_format: ExamContentFormat;
   marks: number | null;
   source_pages: number[];
   review_warning: string | null;
+  requires_visual: boolean;
+  visual_not_needed: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
+};
+
+export type ExamAsset = {
+  id: string;
+  exam_id: string;
+  question_id: string | null;
+  role: ExamAssetRole;
+  variant: "raw" | "display";
+  original_asset_id: string | null;
+  storage_bucket: string;
+  storage_key: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  upload_status: "pending" | "ready" | "failed";
+  sort_order: number;
+  source_page: number | null;
+  crop_x: number | null;
+  crop_y: number | null;
+  crop_width: number | null;
+  crop_height: number | null;
+  width: number | null;
+  height: number | null;
+  rotation: 0 | 90 | 180 | 270;
+  alt_text: string | null;
+  student_visible: boolean;
+  uploaded_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ExamProcessingRun = {
+  id: string;
+  exam_id: string;
+  mode: Extract<ExamIntakeMode, "ai_solved" | "teacher_html">;
+  status: "processing" | "completed" | "failed";
+  model: string;
+  response_id: string | null;
+  error: string | null;
+  started_by: string | null;
+  started_at: string;
+  completed_at: string | null;
+  created_at: string;
 };
 
 export type AccessGrant = {
@@ -292,6 +355,8 @@ export type AppData = {
   exams: Exam[];
   examChapters: ExamChapter[];
   examQuestions: ExamQuestion[];
+  examAssets: ExamAsset[];
+  examProcessingRuns: ExamProcessingRun[];
   accessGrants: AccessGrant[];
   tags: Tag[];
   contentTags: ContentTag[];

@@ -20,11 +20,11 @@ export default async function ExamsPage({
     <>
       <PageHeading
         title="Exam intake"
-        description="Upload staff-only source PDFs, generate draft answers, review the entire exam, and publish approved Q&A."
+        description="Create AI-solved, teacher-answered, or handwritten image exams, then review and publish one protected student experience."
         actions={
           <AdminDialog
-            title="Upload exam PDF"
-            description="The source stays private and is never shown to students."
+            title="Create exam"
+            description="Source files stay private. Only reviewed question and answer content is released."
             trigger={<CreateButton disabled={!isSupabaseConfigured()}>Upload exam</CreateButton>}
           >
             <ExamUploadForm subjects={data.subjects} chapters={data.chapters} />
@@ -63,7 +63,7 @@ export default async function ExamsPage({
                 <TableRow key={exam.id}>
                   <TableCell>
                     <div className="font-medium">{exam.title}</div>
-                    <div className="text-xs text-muted-foreground">{exam.source_file_name}</div>
+                    <div className="text-xs text-muted-foreground">{exam.intake_mode.replaceAll("_", " ")}</div>
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{subject?.name ?? "Unknown subject"}</div>

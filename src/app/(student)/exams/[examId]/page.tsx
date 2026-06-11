@@ -23,6 +23,9 @@ export default async function StudentExamPage({ params }: { params: Promise<{ ex
   const questions = data.examQuestions
     .filter((question) => question.exam_id === exam.id)
     .sort((a, b) => a.sort_order - b.sort_order);
+  const assets = data.examAssets.filter(
+    (asset) => asset.exam_id === exam.id && asset.variant === "display" && asset.student_visible
+  );
 
   await logActivityEvent({
     userId: user.id,
@@ -40,12 +43,25 @@ export default async function StudentExamPage({ params }: { params: Promise<{ ex
       <PageHeading title={exam.title} description={exam.description} />
       <ProtectedExamViewer watermark={watermark}>
         <ExamQuestionList
+          examId={exam.id}
           questions={questions.map((question) => ({
             id: question.id,
             questionNumber: question.question_number,
             questionText: question.question_text,
             answerText: question.answer_text,
-            marks: question.marks
+            questionHtml: question.question_html,
+            answerHtml: question.answer_html,
+            questionFormat: question.question_format,
+            answerFormat: question.answer_format,
+            marks: question.marks,
+            assets: assets
+              .filter((asset) => asset.question_id === question.id)
+              .map((asset) => ({
+                id: asset.id,
+                role: asset.role as "question_image" | "answer_image" | "question_visual" | "answer_visual",
+                sortOrder: asset.sort_order,
+                altText: asset.alt_text
+              }))
           }))}
         />
       </ProtectedExamViewer>
