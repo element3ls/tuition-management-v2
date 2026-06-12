@@ -20,7 +20,7 @@ export default async function ExamsPage({
     <>
       <PageHeading
         title="Exam intake"
-        description="Create AI-solved, teacher-answered, or handwritten image exams, then review and publish one protected student experience."
+        description="Upload source PDFs, generate draft answers, review and publish approved Q&A."
         actions={
           <AdminDialog
             title="Create exam"
@@ -41,7 +41,7 @@ export default async function ExamsPage({
           <TableHeader>
             <TableRow>
               <TableHead>Exam</TableHead>
-              <TableHead>Subject / coverage</TableHead>
+              <TableHead>Coverage</TableHead>
               <TableHead>Questions</TableHead>
               <TableHead>Updated</TableHead>
               <TableHead>Status</TableHead>
@@ -64,6 +64,9 @@ export default async function ExamsPage({
                   <TableCell>
                     <div className="font-medium">{exam.title}</div>
                     <div className="text-xs text-muted-foreground">{exam.intake_mode.replaceAll("_", " ")}</div>
+                    {exam.source_file_name ? (
+                      <div className="font-mono text-xs text-muted-foreground">{exam.source_file_name}</div>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{subject?.name ?? "Unknown subject"}</div>
@@ -75,7 +78,7 @@ export default async function ExamsPage({
                   <TableCell>{formatDistanceToNow(new Date(exam.updated_at), { addSuffix: true })}</TableCell>
                   <TableCell><StatusBadge status={exam.status} /></TableCell>
                   <TableCell className="text-right">
-                    <Button render={<Link href={`/admin/exams/${exam.id}`} />} variant="outline" size="sm">
+                    <Button render={<Link href={`/admin/exams/${exam.id}`} />} nativeButton={false} variant="outline" size="sm">
                       Review
                     </Button>
                   </TableCell>

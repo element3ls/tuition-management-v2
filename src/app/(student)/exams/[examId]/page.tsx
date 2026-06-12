@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { PageHeading } from "@/components/layout/page-heading";
 import { ExamQuestionList } from "@/components/content/exam-question-list";
 import { ProtectedExamViewer } from "@/components/content/protected-exam-viewer";
@@ -40,7 +42,15 @@ export default async function StudentExamPage({ params }: { params: Promise<{ ex
 
   return (
     <>
-      <PageHeading title={exam.title} description={exam.description} />
+      <Link href="/dashboard" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <IconArrowLeft className="size-4" />
+        Dashboard
+      </Link>
+      <PageHeading
+        title={exam.title}
+        description={exam.description}
+        eyebrow={`${questions.length} ${questions.length === 1 ? "question" : "questions"}`}
+      />
       <ProtectedExamViewer watermark={watermark}>
         <ExamQuestionList
           examId={exam.id}

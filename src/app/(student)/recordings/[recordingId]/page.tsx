@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireStudentAccess } from "@/lib/auth/session";
@@ -38,9 +39,15 @@ export default async function RecordingPage({ params }: { params: Promise<{ reco
   }
   materials.sort(bySortOrderThenName);
 
+  const chapter = data.chapters.find((item) => item.id === recording.chapter_id);
+
   return (
     <>
-      <PageHeading title={recording.title} description={recording.description} />
+      <Link href="/dashboard" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <IconArrowLeft className="size-4" />
+        Dashboard
+      </Link>
+      <PageHeading title={recording.title} description={chapter ? `Chapter: ${chapter.title}` : recording.description} />
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <Card>
           <CardContent className="p-0">
@@ -65,7 +72,7 @@ export default async function RecordingPage({ params }: { params: Promise<{ reco
           <CardHeader>
             <CardTitle>Transcript</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-h-40 overflow-y-auto">
             <p className="whitespace-pre-wrap text-sm">{recording.transcript_text}</p>
           </CardContent>
         </Card>

@@ -1,6 +1,7 @@
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge } from "@/components/admin/admin-ui";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Alert } from "@/components/ui/alert";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -79,8 +80,13 @@ export default async function UsersPage({
             {students.map((student) => (
               <TableRow key={student.user_id}>
                 <TableCell>
-                  <div className="font-medium">{student.profile?.full_name ?? "Unknown"}</div>
-                  <div className="text-xs text-muted-foreground">{student.guardian_name ?? "No guardian"}</div>
+                  <div className="flex items-center gap-2.5">
+                    <Avatar name={student.profile?.full_name ?? "?"} size="sm" />
+                    <div>
+                      <div className="font-medium">{student.profile?.full_name ?? "Unknown"}</div>
+                      <div className="text-xs text-muted-foreground">{student.guardian_name ?? "No guardian"}</div>
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell>{student.profile?.email}</TableCell>
                 <TableCell>{student.groups.join(", ") || "None"}</TableCell>

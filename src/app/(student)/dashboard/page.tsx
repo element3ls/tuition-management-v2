@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IconFileText, IconVideo } from "@tabler/icons-react";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +47,7 @@ export default async function DashboardPage() {
                     <div className="mt-3 flex flex-wrap gap-2">
                       {year.subjects.map((subject) => (
                         <Link key={subject.id} href={`/subjects/${subject.id}`}>
-                          <Badge>{subject.name}</Badge>
+                          <Badge variant="brand">{subject.name}</Badge>
                         </Link>
                       ))}
                     </div>
@@ -76,9 +77,14 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent className="grid gap-3">
               {recordings.map((recording) => (
-                <Link key={recording.id} href={`/recordings/${recording.id}`} className="rounded-md border p-3 hover:bg-muted">
-                  <span className="block font-medium">{recording.title}</span>
-                  <span className="text-xs text-muted-foreground">{recording.duration_seconds ?? 0} seconds</span>
+                <Link key={recording.id} href={`/recordings/${recording.id}`} className="flex items-center gap-3 rounded-md border p-3 hover:bg-muted">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded bg-secondary text-secondary-foreground">
+                    <IconVideo className="size-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-medium">{recording.title}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{Math.round((recording.duration_seconds ?? 0) / 60)} min</span>
+                  </span>
                 </Link>
               ))}
             </CardContent>
@@ -89,9 +95,14 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2">
               {materials.map((material) => (
-                <Link key={material.id} href={`/materials/${material.id}`} className="rounded-md border p-3 hover:bg-muted">
-                  <span className="block font-medium">{material.title}</span>
-                  <span className="text-xs text-muted-foreground">{material.file_name}</span>
+                <Link key={material.id} href={`/materials/${material.id}`} className="flex items-center gap-3 rounded-md border p-3 hover:bg-muted">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded bg-secondary text-secondary-foreground">
+                    <IconFileText className="size-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-medium">{material.title}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{material.file_name}</span>
+                  </span>
                 </Link>
               ))}
             </CardContent>

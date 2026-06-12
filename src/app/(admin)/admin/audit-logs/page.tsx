@@ -1,4 +1,5 @@
 import { PageHeading } from "@/components/layout/page-heading";
+import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAppData } from "@/server/data/app-data";
@@ -24,16 +25,24 @@ export default async function AuditLogsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.auditLogs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell>{new Date(log.created_at).toLocaleString()}</TableCell>
-                  <TableCell>{data.profiles.find((profile) => profile.id === log.actor_id)?.full_name ?? "System"}</TableCell>
-                  <TableCell>{log.action}</TableCell>
-                  <TableCell>
-                    {log.resource_type} {log.resource_id}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {data.auditLogs.map((log) => {
+                const actorName = data.profiles.find((profile) => profile.id === log.actor_id)?.full_name ?? "System";
+                return (
+                  <TableRow key={log.id}>
+                    <TableCell><span className="font-mono text-[12px]">{new Date(log.created_at).toLocaleString()}</span></TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar name={actorName} size="sm" />
+                        {actorName}
+                      </div>
+                    </TableCell>
+                    <TableCell><span className="font-mono text-[12px] text-muted-foreground">{log.action}</span></TableCell>
+                    <TableCell>
+                      {log.resource_type} {log.resource_id}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

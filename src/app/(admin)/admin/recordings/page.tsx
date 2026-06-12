@@ -82,7 +82,7 @@ export default async function RecordingsPage() {
             {data.recordings.length === 0 ? <EmptyTable colSpan={6} label="No recordings yet." /> : null}
             {data.recordings.map((recording) => (
               <TableRow key={recording.id}>
-                <TableCell><div className="font-medium">{recording.title}</div><div className="text-xs text-muted-foreground">{recording.duration_seconds ?? 0}s</div></TableCell>
+                <TableCell><div className="font-medium">{recording.title}</div><div className="font-mono text-xs text-muted-foreground">{Math.round((recording.duration_seconds ?? 0) / 60)} min</div></TableCell>
                 <TableCell>{data.chapters.find((chapter) => chapter.id === recording.chapter_id)?.title}</TableCell>
                 <TableCell>{recording.youtube_video_id}</TableCell>
                 <TableCell><StatusBadge status={recording.transcript_review_status} /></TableCell>

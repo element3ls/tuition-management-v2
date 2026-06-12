@@ -1,7 +1,6 @@
 import React from "react";
 import { RichText } from "@/components/content/rich-text";
 import { SafeHtml } from "@/components/content/safe-html";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ExamAssetRole, ExamContentFormat } from "@/types/domain";
 
@@ -75,15 +74,15 @@ export function ExamQuestionList({ examId, questions }: { examId: string; questi
       {questions.map((question) => (
         <Card key={question.id}>
           <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>Question {question.questionNumber}</CardTitle>
-              {question.marks !== null ? <Badge variant="outline">{question.marks} marks</Badge> : null}
-            </div>
+            <CardTitle>
+              Question {question.questionNumber}
+              {question.marks !== null ? ` · ${question.marks} marks` : ""}
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-5">
             <ContentBlock format={question.questionFormat} markdown={question.questionText} html={question.questionHtml} />
             <AssetGallery examId={examId} assets={question.assets} roles={["question_image", "question_visual"]} />
-            <section className="grid gap-4 rounded-md border border-primary/20 bg-primary/5 p-4">
+            <section className="grid gap-4 rounded-lg bg-secondary/30 p-4">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-primary">Worked answer</h2>
               <ContentBlock format={question.answerFormat} markdown={question.answerText} html={question.answerHtml} />
               <AssetGallery examId={examId} assets={question.assets} roles={["answer_image", "answer_visual"]} />

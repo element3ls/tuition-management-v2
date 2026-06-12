@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import DOMPurify from "dompurify";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Plus, Trash2, X } from "lucide-react";
+import { IconArrowUp, IconArrowDown, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -221,13 +221,13 @@ export function ExamReviewEditor({
     <div className="grid gap-4">
       {error ? <Alert variant="destructive">{error}</Alert> : null}
       {message ? <Alert>{message}</Alert> : null}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 p-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-2">
         <p className="px-2 text-sm text-muted-foreground">Preview uses current unsaved edits.</p>
-        <div className="flex gap-1" role="group" aria-label="Exam review view">
-          <Button type="button" size="sm" variant={view === "edit" ? "default" : "ghost"} onClick={() => setView("edit")}>
+        <div className="flex gap-1 rounded-md bg-muted p-1" role="group" aria-label="Exam review view">
+          <Button type="button" size="sm" variant={view === "edit" ? "default" : "secondary"} onClick={() => setView("edit")}>
             Edit questions
           </Button>
-          <Button type="button" size="sm" variant={view === "preview" ? "default" : "ghost"} onClick={() => setView("preview")}>
+          <Button type="button" size="sm" variant={view === "preview" ? "default" : "secondary"} onClick={() => setView("preview")}>
             Student preview
           </Button>
         </div>
@@ -236,9 +236,9 @@ export function ExamReviewEditor({
       {view === "edit" ? (
         <>
           {items.map((question, index) => (
-            <section key={question.id} className="grid gap-3 rounded-lg border border-border/70 bg-card p-4 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-semibold">Question {question.questionNumber || index + 1}</h3>
+            <section key={question.id} className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-2.5">
+                <h3 className="text-sm font-semibold">Question {question.questionNumber || index + 1}</h3>
                 {!published ? (
                   <div className="flex gap-1">
                     <Button
@@ -249,7 +249,7 @@ export function ExamReviewEditor({
                       disabled={index === 0}
                       onClick={() => moveQuestion(index, -1)}
                     >
-                      <ArrowUp />
+                      <IconArrowUp className="size-3.5" />
                     </Button>
                     <Button
                       type="button"
@@ -259,7 +259,7 @@ export function ExamReviewEditor({
                       disabled={index === items.length - 1}
                       onClick={() => moveQuestion(index, 1)}
                     >
-                      <ArrowDown />
+                      <IconArrowDown className="size-3.5" />
                     </Button>
                     <Button
                       type="button"
@@ -268,213 +268,219 @@ export function ExamReviewEditor({
                       aria-label={`Delete question ${question.questionNumber}`}
                       onClick={() => setItems((current) => normalizeOrder(current.filter((_, itemIndex) => itemIndex !== index)))}
                     >
-                      <Trash2 />
+                      <IconTrash className="size-3.5" />
                     </Button>
                   </div>
                 ) : null}
               </div>
-              <div className="grid gap-3 sm:grid-cols-[1fr_120px_140px]">
-                <label className="grid gap-1 text-sm font-medium">
-                  Question number
-                  <Input value={question.questionNumber} onChange={(event) => update(index, "questionNumber", event.target.value)} disabled={published || busy} />
-                </label>
-                <label className="grid gap-1 text-sm font-medium">
-                  Marks
-                  <Input
-                    type="number"
-                    min={0}
-                    value={question.marks ?? ""}
-                    onChange={(event) => update(index, "marks", event.target.value === "" ? null : Number(event.target.value))}
-                    disabled={published || busy}
-                  />
-                </label>
-                <label className="grid gap-1 text-sm font-medium">
-                  Source pages
-                  <Input
-                    value={question.sourcePages.join(", ")}
-                    onChange={(event) =>
-                      update(
-                        index,
-                        "sourcePages",
-                        event.target.value
-                          .split(",")
-                          .map((value) => Number(value.trim()))
-                          .filter((value) => Number.isInteger(value) && value > 0)
-                      )
-                    }
-                    disabled={published || busy}
-                  />
-                </label>
-              </div>
 
-              {question.questionFormat === "markdown" ? (
-                <label className="grid gap-1 text-sm font-medium">
-                  Question Markdown
-                  <Textarea
-                    value={question.questionText ?? ""}
-                    onChange={(event) => update(index, "questionText", event.target.value)}
-                    className="min-h-28 font-mono text-sm"
-                    disabled={published || busy}
-                  />
-                </label>
-              ) : null}
-              {question.answerFormat === "markdown" ? (
-                <label className="grid gap-1 text-sm font-medium">
-                  Worked answer Markdown
-                  <Textarea
-                    value={question.answerText ?? ""}
-                    onChange={(event) => update(index, "answerText", event.target.value)}
-                    className="min-h-48 font-mono text-sm"
-                    disabled={published || busy}
-                  />
-                </label>
-              ) : null}
-              {question.answerFormat === "html" ? (
-                <label className="grid gap-1 text-sm font-medium">
-                  Teacher answer HTML
-                  <Textarea
-                    value={question.answerHtml ?? ""}
-                    onChange={(event) => update(index, "answerHtml", event.target.value)}
-                    className="min-h-48 font-mono text-sm"
-                    disabled={published || busy}
-                  />
-                </label>
-              ) : null}
-
-              {!published && intakeMode === "handwritten_images" ? (
-                <div className="grid gap-3">
-                  <div>
-                    <p className="mb-1 text-sm font-medium">Question images</p>
-                    <ExamAssetUploader examId={examId} role="question_image" onUploaded={(uploaded) => addAssets(index, uploaded)} />
-                  </div>
-                  <div>
-                    <p className="mb-1 text-sm font-medium">Answer images</p>
-                    <ExamAssetUploader examId={examId} role="answer_image" onUploaded={(uploaded) => addAssets(index, uploaded)} />
-                  </div>
-                </div>
-              ) : null}
-
-              {question.assets.length > 0 ? (
-                <div className="grid gap-2">
-                  <p className="text-sm font-medium">Attached images and visuals</p>
-                  {question.assets.map((asset, assetIndex) => (
-                    <div key={asset.id} className="grid gap-2 rounded-md border p-2 sm:grid-cols-[100px_150px_1fr_auto]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={`/api/exams/${examId}/assets/${asset.id}`}
-                        alt={asset.altText ?? asset.role}
-                        className="h-20 w-24 rounded border object-contain"
-                      />
-                      <select
-                        className="rounded-md border bg-background px-2 text-sm"
-                        value={asset.role}
-                        disabled={published}
-                        onChange={(event) => updateAsset(index, assetIndex, { role: event.target.value as EditableAsset["role"] })}
-                      >
-                        {intakeMode === "handwritten_images" ? (
-                          <>
-                            <option value="question_image">Question image</option>
-                            <option value="answer_image">Answer image</option>
-                          </>
-                        ) : (
-                          <>
-                            <option value="question_visual">Question visual</option>
-                            <option value="answer_visual">Answer visual</option>
-                          </>
-                        )}
-                      </select>
-                      <Input
-                        value={asset.altText ?? ""}
-                        placeholder="Accessible description"
-                        disabled={published}
-                        onChange={(event) => updateAsset(index, assetIndex, { altText: event.target.value || null })}
-                      />
-                      {!published ? (
-                        <div className="flex">
-                          <Button
-                            type="button"
-                            size="icon-sm"
-                            variant="ghost"
-                            aria-label={`Move ${asset.altText ?? asset.role} up`}
-                            onClick={() => moveAsset(index, assetIndex, -1)}
-                          >
-                            <ArrowUp />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="icon-sm"
-                            variant="ghost"
-                            aria-label={`Move ${asset.altText ?? asset.role} down`}
-                            onClick={() => moveAsset(index, assetIndex, 1)}
-                          >
-                            <ArrowDown />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="icon-sm"
-                            variant="ghost"
-                            aria-label={`Remove ${asset.altText ?? asset.role}`}
-                            onClick={() =>
-                              update(
-                                index,
-                                "assets",
-                                question.assets
-                                  .filter((_, indexOfAsset) => indexOfAsset !== assetIndex)
-                                  .map((item, order) => ({ ...item, sortOrder: order }))
-                              )
-                            }
-                          >
-                            <X />
-                          </Button>
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              <div className="grid gap-2 rounded-md border bg-muted/20 p-3">
-                <label className="flex items-center gap-2 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={question.requiresVisual}
-                    disabled={published}
-                    onChange={(event) => update(index, "requiresVisual", event.target.checked)}
-                  />
-                  This question requires a graph, diagram, table or other visual
-                </label>
-                {question.requiresVisual ? (
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={question.visualNotNeeded}
-                      disabled={published}
-                      onChange={(event) => update(index, "visualNotNeeded", event.target.checked)}
+              <div className="grid gap-3 p-4">
+                <div className="grid gap-3 sm:grid-cols-[1fr_120px_140px]">
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Question number
+                    <Input value={question.questionNumber} onChange={(event) => update(index, "questionNumber", event.target.value)} disabled={published || busy} />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Marks
+                    <Input
+                      type="number"
+                      min={0}
+                      value={question.marks ?? ""}
+                      onChange={(event) => update(index, "marks", event.target.value === "" ? null : Number(event.target.value))}
+                      disabled={published || busy}
                     />
-                    Teacher confirmed that a separate visual asset is unnecessary
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Source pages
+                    <Input
+                      className="font-mono text-sm"
+                      value={question.sourcePages.join(", ")}
+                      onChange={(event) =>
+                        update(
+                          index,
+                          "sourcePages",
+                          event.target.value
+                            .split(",")
+                            .map((value) => Number(value.trim()))
+                            .filter((value) => Number.isInteger(value) && value > 0)
+                        )
+                      }
+                      disabled={published || busy}
+                    />
+                  </label>
+                </div>
+
+                {question.questionFormat === "markdown" ? (
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Question Markdown
+                    <Textarea
+                      value={question.questionText ?? ""}
+                      onChange={(event) => update(index, "questionText", event.target.value)}
+                      className="min-h-28 font-mono text-sm"
+                      disabled={published || busy}
+                    />
                   </label>
                 ) : null}
-              </div>
+                {question.answerFormat === "markdown" ? (
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Worked answer Markdown
+                    <Textarea
+                      value={question.answerText ?? ""}
+                      onChange={(event) => update(index, "answerText", event.target.value)}
+                      className="min-h-48 font-mono text-sm"
+                      disabled={published || busy}
+                    />
+                  </label>
+                ) : null}
+                {question.answerFormat === "html" ? (
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Teacher answer HTML
+                    <Textarea
+                      value={question.answerHtml ?? ""}
+                      onChange={(event) => update(index, "answerHtml", event.target.value)}
+                      className="min-h-48 font-mono text-sm"
+                      disabled={published || busy}
+                    />
+                  </label>
+                ) : null}
 
-              <label className="grid gap-1 text-sm font-medium">
-                Review warning
-                <Textarea
-                  value={question.reviewWarning ?? ""}
-                  onChange={(event) => update(index, "reviewWarning", event.target.value.trim() ? event.target.value : null)}
-                  className="min-h-20"
-                  placeholder="Leave blank after resolving every issue."
-                  disabled={published || busy}
-                />
-              </label>
-
-              {!published && intakeMode !== "handwritten_images" ? (
-                <details>
-                  <summary className="cursor-pointer text-sm font-medium">Crop a graph or diagram from the source PDF</summary>
-                  <div className="mt-3">
-                    <PdfCropTool examId={examId} onUploaded={(asset) => addAssets(index, [asset])} />
+                {!published && intakeMode === "handwritten_images" ? (
+                  <div className="grid gap-3">
+                    <div>
+                      <p className="mb-1 text-sm font-medium">Question images</p>
+                      <ExamAssetUploader examId={examId} role="question_image" onUploaded={(uploaded) => addAssets(index, uploaded)} />
+                    </div>
+                    <div>
+                      <p className="mb-1 text-sm font-medium">Answer images</p>
+                      <ExamAssetUploader examId={examId} role="answer_image" onUploaded={(uploaded) => addAssets(index, uploaded)} />
+                    </div>
                   </div>
-                </details>
-              ) : null}
+                ) : null}
+
+                {question.assets.length > 0 ? (
+                  <div className="grid gap-2">
+                    <p className="text-sm font-medium">Attached images and visuals</p>
+                    {question.assets.map((asset, assetIndex) => (
+                      <div key={asset.id} className="grid gap-2 rounded-md border p-2 sm:grid-cols-[100px_150px_1fr_auto]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`/api/exams/${examId}/assets/${asset.id}`}
+                          alt={asset.altText ?? asset.role}
+                          className="h-20 w-24 rounded border object-contain"
+                        />
+                        <select
+                          className="rounded-sm border bg-background px-2 text-sm"
+                          value={asset.role}
+                          disabled={published}
+                          onChange={(event) => updateAsset(index, assetIndex, { role: event.target.value as EditableAsset["role"] })}
+                        >
+                          {intakeMode === "handwritten_images" ? (
+                            <>
+                              <option value="question_image">Question image</option>
+                              <option value="answer_image">Answer image</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="question_visual">Question visual</option>
+                              <option value="answer_visual">Answer visual</option>
+                            </>
+                          )}
+                        </select>
+                        <Input
+                          value={asset.altText ?? ""}
+                          placeholder="Accessible description"
+                          disabled={published}
+                          onChange={(event) => updateAsset(index, assetIndex, { altText: event.target.value || null })}
+                        />
+                        {!published ? (
+                          <div className="flex">
+                            <Button
+                              type="button"
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label={`Move ${asset.altText ?? asset.role} up`}
+                              onClick={() => moveAsset(index, assetIndex, -1)}
+                            >
+                              <IconArrowUp className="size-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label={`Move ${asset.altText ?? asset.role} down`}
+                              onClick={() => moveAsset(index, assetIndex, 1)}
+                            >
+                              <IconArrowDown className="size-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label={`Remove ${asset.altText ?? asset.role}`}
+                              onClick={() =>
+                                update(
+                                  index,
+                                  "assets",
+                                  question.assets
+                                    .filter((_, indexOfAsset) => indexOfAsset !== assetIndex)
+                                    .map((item, order) => ({ ...item, sortOrder: order }))
+                                )
+                              }
+                            >
+                              <IconX className="size-3.5" />
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="grid gap-2 rounded-md border border-border bg-muted/20 p-3">
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      className="accent-primary"
+                      checked={question.requiresVisual}
+                      disabled={published}
+                      onChange={(event) => update(index, "requiresVisual", event.target.checked)}
+                    />
+                    This question requires a graph, diagram, table or other visual
+                  </label>
+                  {question.requiresVisual ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="accent-primary"
+                        checked={question.visualNotNeeded}
+                        disabled={published}
+                        onChange={(event) => update(index, "visualNotNeeded", event.target.checked)}
+                      />
+                      Teacher confirmed that a separate visual asset is unnecessary
+                    </label>
+                  ) : null}
+                </div>
+
+                <label className="grid gap-1.5 text-sm font-medium">
+                  Review warning
+                  <Textarea
+                    value={question.reviewWarning ?? ""}
+                    onChange={(event) => update(index, "reviewWarning", event.target.value.trim() ? event.target.value : null)}
+                    className="min-h-20"
+                    placeholder="Leave blank after resolving every issue."
+                    disabled={published || busy}
+                  />
+                </label>
+
+                {!published && intakeMode !== "handwritten_images" ? (
+                  <details>
+                    <summary className="cursor-pointer text-sm font-medium">Crop a graph or diagram from the source PDF</summary>
+                    <div className="mt-3">
+                      <PdfCropTool examId={examId} onUploaded={(asset) => addAssets(index, [asset])} />
+                    </div>
+                  </details>
+                ) : null}
+              </div>
             </section>
           ))}
           {!published ? (
@@ -483,16 +489,16 @@ export function ExamReviewEditor({
               variant="outline"
               onClick={() => setItems((current) => [...current, newQuestion(intakeMode, current.length + 1)])}
             >
-              <Plus />
+              <IconPlus className="size-4" />
               Add question
             </Button>
           ) : null}
         </>
       ) : (
-        <section className="rounded-xl border bg-background p-4 shadow-sm sm:p-6">
-          <div className="mb-5 border-b border-border/70 pb-5">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">Student preview</p>
-            <h1 className="text-2xl font-semibold">{examTitle}</h1>
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
+          <div className="mb-5 border-b border-border pb-5">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-primary">Student preview</p>
+            <h1 className="text-[22px] font-semibold tracking-tight">{examTitle}</h1>
             {examDescription ? <p className="mt-1 text-sm text-muted-foreground">{examDescription}</p> : null}
           </div>
           <ProtectedExamViewer watermark="Student Name | student@example.com | Preview">
@@ -502,11 +508,11 @@ export function ExamReviewEditor({
       )}
 
       {!published ? (
-        <div className="sticky bottom-3 flex flex-wrap justify-end gap-2 rounded-lg border bg-card/95 p-3 shadow-lg backdrop-blur">
-          <Button type="button" variant="outline" disabled={busy} onClick={() => void submit(false)}>
+        <div className="sticky bottom-3 flex flex-wrap justify-end gap-2 rounded-lg border border-border bg-card/95 p-3 shadow-lg backdrop-blur">
+          <Button type="button" variant="secondary" disabled={busy} onClick={() => void submit(false)}>
             Save draft
           </Button>
-          <Button type="button" disabled={busy} onClick={() => void submit(true)}>
+          <Button type="button" variant="default" disabled={busy} onClick={() => void submit(true)}>
             Approve and publish entire exam
           </Button>
         </div>
