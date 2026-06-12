@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, ChevronRight, CircleHelp, Layers, ListTree, Archive } from "lucide-react";
+import { IconBook2, IconChevronRight, IconHelpCircle, IconStack2, IconListTree, IconArchive } from "@tabler/icons-react";
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge, statusOptions } from "@/components/admin/admin-ui";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -63,10 +63,10 @@ type ContentTreeRow =
     };
 
 const rowMeta = {
-  year: { icon: Layers, label: "Year", tone: "bg-primary/10 text-primary ring-primary/15" },
-  subject: { icon: BookOpen, label: "Subject", tone: "bg-sky-50 text-sky-700 ring-sky-600/20" },
-  chapter: { icon: ListTree, label: "Chapter", tone: "bg-amber-50 text-amber-700 ring-amber-600/20" },
-  question: { icon: CircleHelp, label: "Question", tone: "bg-violet-50 text-violet-700 ring-violet-600/20" }
+  year: { icon: IconStack2, label: "Year", tone: "bg-primary/10 text-primary ring-primary/15" },
+  subject: { icon: IconBook2, label: "Subject", tone: "bg-secondary text-secondary-foreground ring-border" },
+  chapter: { icon: IconListTree, label: "Chapter", tone: "bg-secondary text-secondary-foreground ring-border" },
+  question: { icon: IconHelpCircle, label: "Question", tone: "bg-secondary text-secondary-foreground ring-border" }
 } as const;
 
 function childCountLabel(parts: Array<[number, string]>) {
@@ -166,8 +166,8 @@ function ArchiveDialog({ row }: { row: ContentTreeRow }) {
       title={`Archive ${meta.label.toLowerCase()}`}
       description="This is a soft delete. Child statuses stay unchanged, but archived ancestors hide their descendants from students."
       trigger={
-        <button type="button" data-slot="button" className={buttonVariants({ variant: "destructive", size: "sm" })}>
-          <Archive className="size-3.5" />
+        <button type="button" className={buttonVariants({ variant: "destructive", size: "sm" })}>
+          <IconArchive className="size-3.5" />
           Archive
         </button>
       }
@@ -218,7 +218,7 @@ function ContentTreeRow({
             )}
             aria-expanded={canToggle ? expanded : undefined}
           >
-            {canToggle ? <ChevronRight className={cn("size-4 transition-transform", expanded && "rotate-90")} /> : <Icon className="size-4" />}
+            {canToggle ? <IconChevronRight className={cn("size-4 transition-transform", expanded && "rotate-90")} /> : <Icon className="size-4" />}
           </button>
           <div className="min-w-0">
             <button

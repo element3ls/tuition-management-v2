@@ -146,7 +146,7 @@ describe("permission resolver", () => {
     ).resolves.toBe(false);
 
     const draftExam = cloneDemoData();
-    draftExam.exams[0].status = "ready";
+    draftExam.exams[0].status = "review";
     await expect(
       canAccessResource({ userId: demoIds.student, resourceType: "exam", resourceId: demoIds.exam, permission: "view", now }, draftExam)
     ).resolves.toBe(false);

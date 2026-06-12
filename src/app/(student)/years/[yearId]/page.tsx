@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { IconBook2 } from "@tabler/icons-react";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { requireStudentAccess } from "@/lib/auth/session";
 import { canAccessResource } from "@/lib/permissions";
 import { bySortOrderThenName } from "@/lib/sorting";
@@ -25,17 +27,29 @@ export default async function YearPage({ params }: { params: Promise<{ yearId: s
 
   return (
     <>
-      <PageHeading title={year.name} description={year.description} />
-      <div className="grid gap-4 md:grid-cols-2">
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: year.name },
+        ]}
+      />
+      <PageHeading title={year.name} description={year.description ?? "Your assigned subjects for this year."} />
+
+      <div className="grid gap-3 sm:grid-cols-2">
         {subjects.map((subject) => (
           <Card key={subject.id}>
-            <CardHeader>
-              <CardTitle>
-                <Link href={`/subjects/${subject.id}`}>{subject.name}</Link>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{subject.description}</p>
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-secondary">
+                  <IconBook2 className="size-[17px] text-primary" />
+                </span>
+                <div>
+                  <Link href={`/subjects/${subject.id}`} className="text-sm font-semibold leading-snug text-foreground hover:text-primary hover:underline">
+                    {subject.name}
+                  </Link>
+                  {subject.description ? <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{subject.description}</p> : null}
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}

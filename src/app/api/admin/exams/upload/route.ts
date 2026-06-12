@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import { requireAdminAccess } from "@/lib/auth/session";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
+import { prepareExamAssetUpload } from "@/lib/exams/assets";
+import { examCreateInputSchema } from "@/lib/exams/validation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { examSourceBucket, examUploadInputSchema, safeExamFileName } from "@/lib/exams/validation";
 
 export async function POST(request: Request) {
   const { user } = await requireAdminAccess();
   if (isDemoMode() || !isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Supabase must be configured to upload exam PDFs." }, { status: 503 });
+    return NextResponse.json({ error: "Supabase must be configured to upload exams." }, { status: 503 });
   }
 
-  const parsed = examUploadInputSchema.safeParse(await request.json());
+  const parsed = examCreateInputSchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid upload." }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid exam upload." }, { status: 400 });
   }
 
   const supabase = createAdminClient();
@@ -20,11 +21,7 @@ export async function POST(request: Request) {
     supabase.from("subjects").select("id").eq("id", parsed.data.subjectId).maybeSingle(),
     supabase.from("chapters").select("id, subject_id").in("id", parsed.data.chapterIds)
   ]);
-
-  if (!subject) {
-    return NextResponse.json({ error: "Selected subject was not found." }, { status: 400 });
-  }
-
+  if (!subject) return NextResponse.json({ error: "Selected subject was not found." }, { status: 400 });
   if (
     chaptersError ||
     !chapters ||
@@ -35,46 +32,47 @@ export async function POST(request: Request) {
   }
 
   const examId = crypto.randomUUID();
-  const fileName = safeExamFileName(parsed.data.fileName);
-  const sourceKey = `exams/${examId}/${fileName}`;
-  const { error: insertError } = await supabase.from("exams").insert({
+  const initialStatus = parsed.data.intakeMode === "handwritten_images" ? "review" : "draft";
+  const { error: examError } = await supabase.from("exams").insert({
     id: examId,
     subject_id: parsed.data.subjectId,
     title: parsed.data.title,
     description: parsed.data.description || null,
-    source_bucket: examSourceBucket,
-    source_key: sourceKey,
-    source_file_name: parsed.data.fileName,
-    source_mime_type: parsed.data.mimeType,
-    source_size_bytes: parsed.data.sizeBytes,
-    status: "uploading",
+    status: initialStatus,
+    intake_mode: parsed.data.intakeMode,
+    processing_status: "idle",
     uploaded_by: user.id
   });
+  if (examError) return NextResponse.json({ error: examError.message }, { status: 500 });
 
-  if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
-  }
-
-  const { error: chapterLinkError } = await supabase.from("exam_chapters").insert(
-    parsed.data.chapterIds.map((chapterId) => ({
-      exam_id: examId,
-      chapter_id: chapterId
-    }))
+  const { error: linksError } = await supabase.from("exam_chapters").insert(
+    parsed.data.chapterIds.map((chapterId) => ({ exam_id: examId, chapter_id: chapterId }))
   );
-
-  if (chapterLinkError) {
+  if (linksError) {
     await supabase.from("exams").delete().eq("id", examId);
-    return NextResponse.json({ error: chapterLinkError.message }, { status: 500 });
+    return NextResponse.json({ error: linksError.message }, { status: 500 });
   }
 
-  const { data, error } = await supabase.storage.from(examSourceBucket).createSignedUploadUrl(sourceKey);
-  if (error || !data?.token) {
+  try {
+    const uploads = [];
+    for (const asset of parsed.data.assets) {
+      const prepared = await prepareExamAssetUpload({
+        examId,
+        actorId: user.id,
+        role: asset.role,
+        fileName: asset.fileName,
+        mimeType: asset.mimeType,
+        sizeBytes: asset.sizeBytes,
+        sourcePage: "sourcePage" in asset ? asset.sourcePage : null,
+        crop: "crop" in asset ? asset.crop : null,
+        rotation: "rotation" in asset ? asset.rotation : 0,
+        altText: "altText" in asset ? asset.altText : null
+      });
+      uploads.push({ clientId: asset.clientId, ...prepared });
+    }
+    return NextResponse.json({ examId, status: initialStatus, uploads });
+  } catch (error) {
     await supabase.from("exams").delete().eq("id", examId);
-    return NextResponse.json({ error: error?.message ?? "Could not prepare the upload." }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not prepare uploads." }, { status: 500 });
   }
-
-  return NextResponse.json({
-    examId,
-    signedUploadUrl: data.signedUrl
-  });
 }

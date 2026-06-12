@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, FileSpreadsheet, Upload } from "lucide-react";
+import { IconDownload, IconFileSpreadsheet, IconUpload } from "@tabler/icons-react";
 import { importStudentsBatchAction } from "@/features/admin/actions";
 import {
   prepareStudentImportRows,
@@ -123,8 +123,8 @@ export function StudentImportDialog() {
     <Dialog>
       <DialogTrigger
         render={
-          <Button type="button" variant="outline">
-            <Upload className="size-4" />
+          <Button type="button" variant="secondary">
+            <IconUpload className="size-4" />
             Import students
           </Button>
         }
@@ -141,7 +141,7 @@ export function StudentImportDialog() {
         <div className="grid gap-4">
           <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
             <div className="flex items-start gap-3">
-              <FileSpreadsheet className="mt-0.5 size-5 text-primary" />
+              <IconFileSpreadsheet className="mt-0.5 size-5 text-primary" />
               <div className="grid gap-2 text-sm">
                 <p className="font-medium">Use the provided .xlsx template</p>
                 <p className="text-muted-foreground">
@@ -152,7 +152,7 @@ export function StudentImportDialog() {
                   href="/templates/student-batch-upload-template.xlsx"
                   download
                 >
-                  <Download className="size-3.5" />
+                  <IconDownload className="size-3.5" />
                   Download template
                 </a>
               </div>

@@ -1,5 +1,7 @@
 import { AdminDialog, CreateButton, EmptyTable, Field, StatusBadge } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,9 +19,10 @@ export default async function AdminUsersPage() {
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Admins" }]} />
       <PageHeading
         title="Admins"
-        description="Create and review admin console users."
+        description="Create and review admin console accounts. Super-admin only."
         actions={
           <AdminDialog title="Create admin" description="Create login access for a normal admin account." trigger={<CreateButton>New admin</CreateButton>}>
             <form action={createAdminAction} className="grid gap-3" data-mutation-form>
@@ -51,12 +54,17 @@ export default async function AdminUsersPage() {
             {admins.length === 0 ? <EmptyTable colSpan={4} label="No normal admin users yet." /> : null}
             {admins.map((admin) => (
               <TableRow key={admin.id}>
-                <TableCell className="font-medium">{admin.full_name}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2.5">
+                    <Avatar name={admin.full_name} size="sm" />
+                    <span className="font-medium">{admin.full_name}</span>
+                  </div>
+                </TableCell>
                 <TableCell>{admin.email}</TableCell>
                 <TableCell>
                   <StatusBadge status={admin.is_active} />
                 </TableCell>
-                <TableCell>{new Date(admin.created_at).toLocaleString()}</TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">{new Date(admin.created_at).toLocaleString()}</TableCell>
               </TableRow>
             ))}
           </TableBody>

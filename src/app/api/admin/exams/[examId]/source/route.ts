@@ -12,10 +12,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ exam
     });
   }
   const supabase = createAdminClient();
-  const { data: exam } = await supabase.from("exams").select("source_bucket, source_key").eq("id", examId).single();
-  if (!exam) return NextResponse.json({ error: "Exam not found." }, { status: 404 });
+  const { data: asset } = await supabase
+    .from("exam_assets")
+    .select("storage_bucket, storage_key")
+    .eq("exam_id", examId)
+    .eq("role", "source_pdf")
+    .eq("variant", "raw")
+    .eq("upload_status", "ready")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!asset) return NextResponse.json({ error: "Source PDF not found." }, { status: 404 });
 
-  const { data, error } = await supabase.storage.from(exam.source_bucket).createSignedUrl(exam.source_key, 10 * 60);
+  const { data, error } = await supabase.storage.from(asset.storage_bucket).createSignedUrl(asset.storage_key, 10 * 60);
   if (error || !data?.signedUrl) {
     return NextResponse.json({ error: error?.message ?? "Could not open the source PDF." }, { status: 500 });
   }

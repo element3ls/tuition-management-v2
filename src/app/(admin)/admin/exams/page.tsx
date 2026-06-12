@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { AdminDialog, CreateButton, EmptyTable, StatusBadge } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -18,13 +19,14 @@ export default async function ExamsPage({
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Exams" }]} />
       <PageHeading
         title="Exam intake"
-        description="Upload staff-only source PDFs, generate draft answers, review the entire exam, and publish approved Q&A."
+        description="Upload source PDFs, generate draft answers, review and publish approved Q&A."
         actions={
           <AdminDialog
-            title="Upload exam PDF"
-            description="The source stays private and is never shown to students."
+            title="Create exam"
+            description="Source files stay private. Only reviewed question and answer content is released."
             trigger={<CreateButton disabled={!isSupabaseConfigured()}>Upload exam</CreateButton>}
           >
             <ExamUploadForm subjects={data.subjects} chapters={data.chapters} />
@@ -41,7 +43,7 @@ export default async function ExamsPage({
           <TableHeader>
             <TableRow>
               <TableHead>Exam</TableHead>
-              <TableHead>Subject / coverage</TableHead>
+              <TableHead>Coverage</TableHead>
               <TableHead>Questions</TableHead>
               <TableHead>Updated</TableHead>
               <TableHead>Status</TableHead>
@@ -63,7 +65,10 @@ export default async function ExamsPage({
                 <TableRow key={exam.id}>
                   <TableCell>
                     <div className="font-medium">{exam.title}</div>
-                    <div className="text-xs text-muted-foreground">{exam.source_file_name}</div>
+                    <div className="text-xs text-muted-foreground">{exam.intake_mode.replaceAll("_", " ")}</div>
+                    {exam.source_file_name ? (
+                      <div className="font-mono text-xs text-muted-foreground">{exam.source_file_name}</div>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{subject?.name ?? "Unknown subject"}</div>
@@ -75,7 +80,7 @@ export default async function ExamsPage({
                   <TableCell>{formatDistanceToNow(new Date(exam.updated_at), { addSuffix: true })}</TableCell>
                   <TableCell><StatusBadge status={exam.status} /></TableCell>
                   <TableCell className="text-right">
-                    <Button render={<Link href={`/admin/exams/${exam.id}`} />} variant="outline" size="sm">
+                    <Button render={<Link href={`/admin/exams/${exam.id}`} />} nativeButton={false} variant="outline" size="sm">
                       Review
                     </Button>
                   </TableCell>

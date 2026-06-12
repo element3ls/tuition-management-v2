@@ -176,19 +176,25 @@ Files go to private Supabase Storage bucket `solution-materials`. Metadata is st
 
 Manage exams at `/admin/exams`.
 
-1. Upload a PDF, select its subject, and select one or more covered chapters.
-2. The browser uploads directly to the private Supabase `exam-sources` bucket using resumable TUS upload.
-3. Open the uploaded exam and start AI processing.
-4. The application sends the staff-only PDF to the OpenAI Responses API in background mode.
-5. Review every generated question and worked answer against the source PDF.
-6. Resolve and clear every AI review warning.
-7. Save drafts as needed, then approve and publish the entire exam.
+Choose one intake mode:
+
+- `ai_solved`: upload one PDF. AI transcribes the questions and creates worked Markdown answers.
+- `teacher_html`: upload one PDF, one strict answer HTML file, and any local HTML images. AI transcribes questions only and is explicitly forbidden from answering them.
+- `handwritten_images`: create question groups and upload ordered question and answer images without AI transcription.
+
+All uploads use generic signed uploads to the private `exam-assets` bucket. Legacy PDF files may remain in `exam-sources`. Image uploads are retained as staff-only originals and normalized to stripped WebP display assets (maximum 2400 px, quality 88).
+
+For PDF modes, open the exam after upload and start background processing. OpenAI webhook completion and status polling share one idempotent database finalizer. Reviewers can add, delete and reorder questions, edit mode-specific content, clear warnings, and crop graphs or diagrams from the source PDF with the PDF.js crop tool.
+
+Teacher HTML must contain exactly one `<section data-question-number="...">` per transcribed question. Local images use `assets/filename.png`; external, data, and blob URLs are rejected. Use `<span data-math>...</span>` or `<div data-math-display>...</div>` for KaTeX math.
+
+Handwritten groups require at least one question image and one answer image before publication. In PDF modes, a question marked as requiring a visual needs a cropped visual unless the teacher explicitly marks the separate visual unnecessary.
 
 The uploader may approve their own exam. Published exams are read-only and appear primarily on the subject page, with related links on each selected chapter page. Access inherits from the subject or year; a direct exam grant can be used for exceptional releases. Students receive only reviewed questions and answers; the source PDF route requires an admin role.
 
-Student exam pages render Markdown and LaTeX, include a personalized watermark, disable common copy/save/print interactions, hide protected content from print CSS, and log exam views. These controls discourage casual copying but cannot prevent screenshots, cameras, browser developer tools, or OCR.
+Student exam pages render Markdown/KaTeX, sanitized HTML/KaTeX, cropped visuals, and ordered handwritten images through protected asset routes. They include a personalized watermark, disable common copy/save/print interactions, hide protected content from print CSS, and log exam views. These controls discourage casual copying but cannot prevent screenshots, cameras, browser developer tools, or OCR.
 
-Exam processing states are `uploading`, `uploaded`, `processing`, `ready`, `failed`, `published`, and `archived`. A failed exam can be processed again. Publication and reviewed question updates are committed in one database transaction.
+Exam lifecycle states are `draft`, `review`, `published`, and `archived`. Processing status is tracked separately as `idle`, `processing`, `completed`, or `failed`, with every AI attempt retained in `exam_processing_runs`. A failed draft can be processed again. Processing completion, publication, and reviewed question updates use database transactions.
 
 ## Private Storage And Signed URLs
 

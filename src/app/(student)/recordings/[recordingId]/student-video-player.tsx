@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LoaderCircle, Pause, Play } from "lucide-react";
+import { IconLoader2, IconPlayerPause, IconPlayerPlay } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
 const youtubeOrigin = "https://www.youtube-nocookie.com";
@@ -117,7 +117,7 @@ export function StudentVideoPlayer({ videoId, title }: { videoId: string; title:
         {!loaded ? (
           <div className="absolute inset-0 grid place-items-center bg-black/80 text-white">
             <div className="flex items-center gap-2 text-sm">
-              <LoaderCircle className="size-4 animate-spin" />
+              <IconLoader2 className="size-4 animate-spin" />
               Loading video
             </div>
           </div>
@@ -145,11 +145,11 @@ export function StudentVideoPlayer({ videoId, title }: { videoId: string; title:
           </div>
           <div className="flex items-center gap-2">
             <Button type="button" onClick={() => sendCommand("playVideo")} disabled={!loaded}>
-              <Play className="size-4" />
+              <IconPlayerPlay className="size-4" />
               Play
             </Button>
             <Button type="button" variant="outline" onClick={() => sendCommand("pauseVideo")} disabled={!loaded}>
-              <Pause className="size-4" />
+              <IconPlayerPause className="size-4" />
               Pause
             </Button>
           </div>

@@ -1,36 +1,79 @@
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
 import { logoutAction } from "@/features/auth/actions";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { hasAdminRole } from "@/lib/auth/roles";
 import type { Profile, RoleName } from "@/types/domain";
 
-export function AppHeader({ user, roles }: { user: Profile; roles: RoleName[] }) {
+// TutorEase monogram mark — rounded square, deep navy + periwinkle
+export function TutorEaseMark({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <rect width="40" height="40" rx="10" fill="#292966" />
+      {/* T crossbar */}
+      <path d="M12 14.5h16" stroke="#CCCCFF" strokeWidth="3" strokeLinecap="round" />
+      {/* T stem */}
+      <path d="M20 14.5V28" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
+      {/* Dot accent */}
+      <circle cx="20" cy="28" r="1.9" fill="#CCCCFF" />
+    </svg>
+  );
+}
+
+export function AppHeader({
+  user,
+  roles,
+}: {
+  user: Profile;
+  roles: RoleName[];
+}) {
   const homeHref = hasAdminRole(roles) ? "/admin" : "/dashboard";
+  const isAdmin = hasAdminRole(roles);
 
   return (
-    <header className="border-b border-border/70 bg-card/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <Link href={homeHref} className="flex min-w-0 items-center gap-2 font-semibold">
-          <span className="rounded-lg bg-primary p-2 text-primary-foreground">
-            <GraduationCap className="size-4" />
+    <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+      <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between gap-4 px-4">
+
+        {/* Left — logo + wordmark */}
+        <Link
+          href={homeHref}
+          className="flex shrink-0 items-center gap-2.5 font-semibold"
+        >
+          <TutorEaseMark size={28} />
+          <span className="text-[15px] font-semibold tracking-tight text-foreground">
+            TutorEase
           </span>
-          <span className="min-w-0">Tuition Management</span>
+          {isAdmin && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+              Admin
+            </span>
+          )}
         </Link>
-        <div className="flex min-w-0 items-center gap-2 text-sm sm:gap-3">
-          <span className="hidden truncate text-muted-foreground sm:inline">{user.full_name}</span>
-          <span className="max-w-28 truncate rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground sm:max-w-none">
-            {roles.join(", ")}
+
+        {/* Right — user name + account + logout */}
+        <div className="flex min-w-0 items-center gap-3 text-sm">
+          <span className="hidden truncate text-sm text-muted-foreground sm:inline">
+            {user.full_name}
           </span>
-          <Link className={buttonVariants({ variant: "outline" })} href="/account">
+          <Link
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+            href="/account"
+          >
             Account
           </Link>
           <form action={logoutAction}>
-            <Button variant="outline" type="submit">
+            <Button variant="ghost" size="sm" type="submit">
               Log out
             </Button>
           </form>
         </div>
+
       </div>
     </header>
   );

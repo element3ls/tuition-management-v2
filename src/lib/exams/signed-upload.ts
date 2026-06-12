@@ -13,7 +13,7 @@ function uploadError(xhr: XMLHttpRequest) {
   }
 }
 
-export function uploadPdfToSignedUrl({ url, file, onProgress }: SignedUploadOptions) {
+export function uploadFileToSignedUrl({ url, file, onProgress }: SignedUploadOptions) {
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);
@@ -33,8 +33,8 @@ export function uploadPdfToSignedUrl({ url, file, onProgress }: SignedUploadOpti
 
       reject(new Error(uploadError(xhr)));
     });
-    xhr.addEventListener("error", () => reject(new Error("The PDF upload could not reach storage.")));
-    xhr.addEventListener("abort", () => reject(new Error("The PDF upload was cancelled.")));
+    xhr.addEventListener("error", () => reject(new Error("The file upload could not reach storage.")));
+    xhr.addEventListener("abort", () => reject(new Error("The file upload was cancelled.")));
 
     const body = new FormData();
     body.append("cacheControl", "3600");
@@ -42,3 +42,5 @@ export function uploadPdfToSignedUrl({ url, file, onProgress }: SignedUploadOpti
     xhr.send(body);
   });
 }
+
+export const uploadPdfToSignedUrl = uploadFileToSignedUrl;

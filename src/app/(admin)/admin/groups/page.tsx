@@ -1,11 +1,11 @@
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { UserPlus } from "lucide-react";
+import { IconUserPlus } from "@tabler/icons-react";
 import {
   addStudentToGroupAction,
   createGroupAction,
@@ -24,6 +24,7 @@ export default async function GroupsPage() {
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Groups" }]} />
       <PageHeading
         title="Groups"
         description="Manage access cohorts, student memberships, and membership windows."
@@ -32,15 +33,8 @@ export default async function GroupsPage() {
             <AdminDialog
               title="Add student to group"
               trigger={
-                <button
-                  type="button"
-                  data-slot="button"
-                  className={cn(
-                    buttonVariants({ variant: "outline" }),
-                    "border-primary/50 bg-primary/10 text-primary shadow-sm hover:border-primary/70 hover:bg-primary/15 hover:text-primary"
-                  )}
-                >
-                  <UserPlus className="size-4" />
+                <button type="button" className={buttonVariants({ variant: "secondary" })}>
+                  <IconUserPlus className="size-4" />
                   Add student
                 </button>
               }
@@ -140,7 +134,7 @@ export default async function GroupsPage() {
                       </AdminDialog>
                       <AdminDialog
                         title="Edit memberships"
-                        trigger={<button type="button" data-slot="button" className={buttonVariants({ variant: "outline", size: "sm" })}>Members</button>}
+                        trigger={<button type="button" className={buttonVariants({ variant: "outline", size: "sm" })}>Members</button>}
                       >
                         <div className="grid gap-3">
                           {memberships.length === 0 ? <p className="text-sm text-muted-foreground">No memberships in this group.</p> : null}

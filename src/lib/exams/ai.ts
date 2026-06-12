@@ -3,20 +3,24 @@ import "server-only";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit/log";
 import { getOpenAIEnv } from "@/lib/env";
+import { importTeacherHtmlAnswers, mapTeacherAnswers } from "@/lib/exams/html";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { ExamStatus } from "@/types/domain";
+import type { ExamIntakeMode, ExamProcessingStatus } from "@/types/domain";
 
 const generatedExamSchema = z.object({
-  questions: z.array(
-    z.object({
-      question_number: z.string().min(1),
-      question_text: z.string().min(1),
-      answer_text: z.string().min(1),
-      marks: z.number().int().min(0).nullable(),
-      source_pages: z.array(z.number().int().positive()),
-      review_warning: z.string().nullable()
-    })
-  ).min(1)
+  questions: z
+    .array(
+      z.object({
+        question_number: z.string().min(1),
+        question_text: z.string().min(1),
+        answer_text: z.string().nullable(),
+        marks: z.number().int().min(0).nullable(),
+        source_pages: z.array(z.number().int().positive()),
+        review_warning: z.string().nullable(),
+        requires_visual: z.boolean()
+      })
+    )
+    .min(1)
 });
 
 const structuredOutputSchema = {
@@ -30,33 +34,52 @@ const structuredOutputSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["question_number", "question_text", "answer_text", "marks", "source_pages", "review_warning"],
+        required: [
+          "question_number",
+          "question_text",
+          "answer_text",
+          "marks",
+          "source_pages",
+          "review_warning",
+          "requires_visual"
+        ],
         properties: {
           question_number: { type: "string" },
           question_text: { type: "string" },
-          answer_text: { type: "string" },
+          answer_text: { anyOf: [{ type: "string" }, { type: "null" }] },
           marks: { anyOf: [{ type: "integer", minimum: 0 }, { type: "null" }] },
-          source_pages: {
-            type: "array",
-            items: { type: "integer", minimum: 1 }
-          },
-          review_warning: { anyOf: [{ type: "string" }, { type: "null" }] }
+          source_pages: { type: "array", items: { type: "integer", minimum: 1 } },
+          review_warning: { anyOf: [{ type: "string" }, { type: "null" }] },
+          requires_visual: { type: "boolean" }
         }
       }
     }
   }
 } as const;
 
-const processingPrompt = `You are preparing a reviewed tuition exam solution from an uploaded PDF.
-
-Return every visible exam question in original order, including all subparts. For each item:
-- Transcribe the question faithfully. Preserve mathematical notation using Markdown with $...$ for inline LaTeX and $$...$$ for display LaTeX. Do not use \\(...\\) or \\[...\\] delimiters.
-- Produce a complete worked answer suitable for students. Show reasoning and finish with a clear final answer.
+const commonPrompt = `Return every visible exam question in original order, including all subparts.
+- Transcribe each question faithfully using Markdown with $...$ for inline LaTeX and $$...$$ for display LaTeX.
 - Copy the printed mark allocation when visible; otherwise use null.
 - Record every one-based PDF page number containing the question.
-- Set review_warning when any text, diagram, graph, table, or symbol is uncertain, illegible, cropped, or cannot be represented adequately in text. Otherwise use null.
+- Set requires_visual to true when a graph, diagram, table, map, image, or other visual is needed to understand or answer the question.
+- Set review_warning when any text or visual is uncertain, illegible, cropped, or cannot be represented adequately. Otherwise use null.
+- Do not invent missing values or include front-matter instructions.
+- Treat related subparts as one entry when they share a question number.`;
 
-Do not invent missing values. Do not include front-matter instructions unless they are part of a question. Treat related subparts as one question entry when they share a question number.`;
+export function processingPrompt(mode: Extract<ExamIntakeMode, "ai_solved" | "teacher_html">) {
+  if (mode === "teacher_html") {
+    return `You are transcribing an uploaded exam paper for a teacher-provided answer workflow.
+
+${commonPrompt}
+
+You must not solve, answer, hint at, or explain any question. Set answer_text to null for every question.`;
+  }
+  return `You are preparing a reviewed tuition exam solution from an uploaded PDF.
+
+${commonPrompt}
+
+For every question, produce a complete worked answer suitable for students. Show reasoning and finish with a clear final answer. answer_text must never be null.`;
+}
 
 type OpenAIResponse = {
   id?: string;
@@ -64,15 +87,11 @@ type OpenAIResponse = {
   error?: { message?: string } | null;
   incomplete_details?: { reason?: string } | null;
   output_text?: string;
-  output?: Array<{
-    type?: string;
-    content?: Array<{ type?: string; text?: string }>;
-  }>;
+  output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
 };
 
 function responseText(response: OpenAIResponse) {
   if (response.output_text) return response.output_text;
-
   return (response.output ?? [])
     .flatMap((item) => item.content ?? [])
     .filter((item) => item.type === "output_text" && typeof item.text === "string")
@@ -88,163 +107,267 @@ async function openAIRequest(path: string, init?: RequestInit) {
   const { apiKey } = getOpenAIEnv();
   const response = await fetch(`https://api.openai.com/v1${path}`, {
     ...init,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      ...init?.headers
-    },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", ...init?.headers },
     cache: "no-store"
   });
-
   const body = (await response.json()) as OpenAIResponse;
-  if (!response.ok) {
-    throw new Error(responseFailureMessage(body));
-  }
+  if (!response.ok) throw new Error(responseFailureMessage(body));
   return body;
+}
+
+async function failRun(runId: string, examId: string, message: string) {
+  const supabase = createAdminClient();
+  const completedAt = new Date().toISOString();
+  await Promise.all([
+    supabase.from("exam_processing_runs").update({ status: "failed", error: message, completed_at: completedAt }).eq("id", runId),
+    supabase
+      .from("exams")
+      .update({ processing_status: "failed", ai_error: message, processing_completed_at: completedAt })
+      .eq("id", examId)
+  ]);
+  return { status: "failed" as ExamProcessingStatus, error: message };
 }
 
 export async function startExamProcessing(examId: string, actorId: string) {
   const supabase = createAdminClient();
   const { data: exam, error: examError } = await supabase.from("exams").select("*").eq("id", examId).single();
   if (examError || !exam) throw new Error("Exam not found.");
-  if (!["uploaded", "failed", "ready"].includes(exam.status)) {
-    throw new Error("This exam cannot be processed in its current state.");
+  if (exam.intake_mode === "handwritten_images") throw new Error("Handwritten exams do not use AI processing.");
+  if (exam.status === "published" || exam.status === "archived") throw new Error("This exam cannot be reprocessed.");
+  if (exam.processing_status === "processing") throw new Error("This exam is already processing.");
+
+  const { data: sourceAsset } = await supabase
+    .from("exam_assets")
+    .select("*")
+    .eq("exam_id", examId)
+    .eq("role", "source_pdf")
+    .eq("variant", "raw")
+    .eq("upload_status", "ready")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!sourceAsset) throw new Error("Upload and verify the source PDF before processing.");
+
+  if (exam.intake_mode === "teacher_html") {
+    const { data: htmlAsset } = await supabase
+      .from("exam_assets")
+      .select("id")
+      .eq("exam_id", examId)
+      .eq("role", "answer_html")
+      .eq("variant", "raw")
+      .eq("upload_status", "ready")
+      .maybeSingle();
+    if (!htmlAsset) throw new Error("Upload and verify the teacher answer HTML before processing.");
   }
 
   const { data: signedData, error: signedError } = await supabase.storage
-    .from(exam.source_bucket)
-    .createSignedUrl(exam.source_key, 60 * 60);
-  if (signedError || !signedData?.signedUrl) {
-    throw new Error(signedError?.message ?? "Could not prepare the source PDF.");
-  }
+    .from(sourceAsset.storage_bucket)
+    .createSignedUrl(sourceAsset.storage_key, 60 * 60);
+  if (signedError || !signedData?.signedUrl) throw new Error(signedError?.message ?? "Could not prepare the source PDF.");
 
   const { model } = getOpenAIEnv();
-  const response = await openAIRequest("/responses", {
-    method: "POST",
-    body: JSON.stringify({
-      model,
-      background: true,
-      store: true,
-      reasoning: { effort: "medium" },
-      input: [
-        {
-          role: "user",
-          content: [
-            { type: "input_file", file_url: signedData.signedUrl },
-            { type: "input_text", text: processingPrompt }
-          ]
-        }
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "exam_questions_and_answers",
-          strict: true,
-          schema: structuredOutputSchema
-        }
-      }
-    })
-  });
-
-  if (!response.id) throw new Error("OpenAI did not return a processing identifier.");
-
+  const runId = crypto.randomUUID();
   const startedAt = new Date().toISOString();
-  const { error: updateError } = await supabase
-    .from("exams")
-    .update({
-      status: "processing",
-      ai_model: model,
-      ai_response_id: response.id,
-      ai_error: null,
-      processing_started_at: startedAt,
-      processing_completed_at: null
-    })
-    .eq("id", examId);
-  if (updateError) throw new Error(updateError.message);
-
-  await logAudit({
-    actorId,
-    action: "exam_processing_started",
-    resourceType: "exam",
-    resourceId: examId,
-    afterData: { model, response_id: response.id }
+  const { error: runError } = await supabase.from("exam_processing_runs").insert({
+    id: runId,
+    exam_id: examId,
+    mode: exam.intake_mode,
+    status: "processing",
+    model,
+    started_by: actorId,
+    started_at: startedAt
   });
+  if (runError) throw new Error(runError.message);
 
-  return { status: "processing" as ExamStatus };
+  try {
+    const response = await openAIRequest("/responses", {
+      method: "POST",
+      body: JSON.stringify({
+        model,
+        background: true,
+        store: true,
+        reasoning: { effort: "medium" },
+        input: [
+          {
+            role: "user",
+            content: [
+              { type: "input_file", file_url: signedData.signedUrl },
+              { type: "input_text", text: processingPrompt(exam.intake_mode) }
+            ]
+          }
+        ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: exam.intake_mode === "teacher_html" ? "exam_question_transcription" : "exam_questions_and_answers",
+            strict: true,
+            schema: structuredOutputSchema
+          }
+        }
+      })
+    });
+    if (!response.id) throw new Error("OpenAI did not return a processing identifier.");
+
+    const { error: updateRunError } = await supabase
+      .from("exam_processing_runs")
+      .update({ response_id: response.id })
+      .eq("id", runId);
+    if (updateRunError) throw new Error(updateRunError.message);
+    const { error: updateExamError } = await supabase
+      .from("exams")
+      .update({
+        processing_status: "processing",
+        ai_model: model,
+        ai_response_id: response.id,
+        ai_error: null,
+        processing_started_at: startedAt,
+        processing_completed_at: null
+      })
+      .eq("id", examId);
+    if (updateExamError) throw new Error(updateExamError.message);
+
+    await logAudit({
+      actorId,
+      action: "exam_processing_started",
+      resourceType: "exam",
+      resourceId: examId,
+      afterData: { run_id: runId, mode: exam.intake_mode, model, response_id: response.id }
+    });
+    return { status: "processing" as ExamProcessingStatus };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not start AI processing.";
+    await failRun(runId, examId, message);
+    throw error;
+  }
+}
+
+async function loadTeacherHtml(examId: string) {
+  const supabase = createAdminClient();
+  const { data: htmlAsset } = await supabase
+    .from("exam_assets")
+    .select("*")
+    .eq("exam_id", examId)
+    .eq("role", "answer_html")
+    .eq("variant", "raw")
+    .eq("upload_status", "ready")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  if (!htmlAsset) throw new Error("Teacher answer HTML was not found.");
+
+  const [{ data: signed }, { data: imageAssets }] = await Promise.all([
+    supabase.storage.from(htmlAsset.storage_bucket).createSignedUrl(htmlAsset.storage_key, 60),
+    supabase
+      .from("exam_assets")
+      .select("*")
+      .eq("exam_id", examId)
+      .eq("role", "html_image")
+      .eq("variant", "display")
+      .eq("upload_status", "ready")
+  ]);
+  if (!signed?.signedUrl) throw new Error("Could not read the teacher answer HTML.");
+  const response = await fetch(signed.signedUrl, { cache: "no-store" });
+  if (!response.ok) throw new Error("Could not read the teacher answer HTML.");
+  return importTeacherHtmlAnswers(await response.text(), examId, imageAssets ?? []);
+}
+
+export async function finalizeExamProcessing(responseId: string, actorId?: string | null) {
+  const supabase = createAdminClient();
+  const { data: run, error: runError } = await supabase
+    .from("exam_processing_runs")
+    .select("*")
+    .eq("response_id", responseId)
+    .single();
+  if (runError || !run) throw new Error("Exam processing run was not found.");
+  if (run.status === "completed") return { status: "completed" as ExamProcessingStatus, error: null };
+  if (run.status === "failed") return { status: "failed" as ExamProcessingStatus, error: run.error };
+
+  const response = await openAIRequest(`/responses/${encodeURIComponent(responseId)}`);
+  if (response.status === "queued" || response.status === "in_progress") {
+    return { status: "processing" as ExamProcessingStatus, error: null };
+  }
+  if (response.status !== "completed") return failRun(run.id, run.exam_id, responseFailureMessage(response));
+
+  let generated;
+  try {
+    generated = generatedExamSchema.parse(JSON.parse(responseText(response)));
+    if (run.mode === "ai_solved" && generated.questions.some((question) => !question.answer_text?.trim())) {
+      throw new Error("AI-solved output omitted an answer.");
+    }
+    if (run.mode === "teacher_html" && generated.questions.some((question) => question.answer_text !== null)) {
+      throw new Error("Transcription-only output unexpectedly contained an answer.");
+    }
+    const questionNumbers = generated.questions.map((question) => question.question_number);
+    if (new Set(questionNumbers).size !== questionNumbers.length) {
+      throw new Error("AI output contained duplicate question numbers.");
+    }
+  } catch (error) {
+    return failRun(
+      run.id,
+      run.exam_id,
+      error instanceof Error ? error.message : "The AI response did not contain valid exam data."
+    );
+  }
+
+  try {
+    let questions = generated.questions.map((question, index) => ({
+      id: crypto.randomUUID(),
+      exam_id: run.exam_id,
+      question_number: question.question_number,
+      question_text: question.question_text,
+      answer_text: run.mode === "ai_solved" ? question.answer_text : null,
+      question_html: null,
+      answer_html: null as string | null,
+      question_format: "markdown",
+      answer_format: run.mode === "teacher_html" ? "html" : "markdown",
+      marks: question.marks,
+      source_pages: question.source_pages,
+      review_warning: question.review_warning,
+      requires_visual: question.requires_visual,
+      visual_not_needed: false,
+      sort_order: index + 1
+    }));
+
+    if (run.mode === "teacher_html") {
+      questions = mapTeacherAnswers(questions, await loadTeacherHtml(run.exam_id));
+    }
+
+    const { data: didComplete, error: completionError } = await supabase.rpc("complete_exam_processing_run", {
+      p_run_id: run.id,
+      p_questions: questions
+    });
+    if (completionError) throw new Error(completionError.message);
+
+    if (didComplete) {
+      await logAudit({
+        actorId: actorId ?? run.started_by,
+        action: "exam_processing_completed",
+        resourceType: "exam",
+        resourceId: run.exam_id,
+        afterData: { run_id: run.id, mode: run.mode, question_count: questions.length }
+      });
+    }
+    return { status: "completed" as ExamProcessingStatus, error: null, questionCount: questions.length };
+  } catch (error) {
+    return failRun(run.id, run.exam_id, error instanceof Error ? error.message : "Could not save processed questions.");
+  }
 }
 
 export async function syncExamProcessing(examId: string, actorId: string) {
   const supabase = createAdminClient();
   const { data: exam, error: examError } = await supabase.from("exams").select("*").eq("id", examId).single();
   if (examError || !exam) throw new Error("Exam not found.");
-  if (exam.status !== "processing" || !exam.ai_response_id) {
-    return { status: exam.status as ExamStatus, error: exam.ai_error as string | null };
+  if (exam.processing_status !== "processing") {
+    return { status: exam.processing_status as ExamProcessingStatus, error: exam.ai_error as string | null };
   }
-
-  const response = await openAIRequest(`/responses/${encodeURIComponent(exam.ai_response_id)}`);
-  if (response.status === "queued" || response.status === "in_progress") {
-    return { status: "processing" as ExamStatus, error: null };
-  }
-
-  if (response.status !== "completed") {
-    const message = responseFailureMessage(response);
-    await supabase
-      .from("exams")
-      .update({ status: "failed", ai_error: message, processing_completed_at: new Date().toISOString() })
-      .eq("id", examId);
-    return { status: "failed" as ExamStatus, error: message };
-  }
-
-  let generated;
-  try {
-    generated = generatedExamSchema.parse(JSON.parse(responseText(response)));
-  } catch {
-    const message = "The AI response was completed but did not contain valid exam data.";
-    await supabase
-      .from("exams")
-      .update({ status: "failed", ai_error: message, processing_completed_at: new Date().toISOString() })
-      .eq("id", examId);
-    return { status: "failed" as ExamStatus, error: message };
-  }
-
-  const questions = generated.questions.map((question, index) => ({
-    exam_id: examId,
-    question_number: question.question_number,
-    question_text: question.question_text,
-    answer_text: question.answer_text,
-    marks: question.marks,
-    source_pages: question.source_pages,
-    review_warning: question.review_warning,
-    sort_order: index + 1
-  }));
-
-  const { data: existingQuestions, error: existingError } = await supabase
-    .from("exam_questions")
-    .select("id")
-    .eq("exam_id", examId);
-  if (existingError) throw new Error(existingError.message);
-  const { error: insertError } = await supabase.from("exam_questions").insert(questions);
-  if (insertError) throw new Error(insertError.message);
-  const existingIds = (existingQuestions ?? []).map((question) => question.id);
-  if (existingIds.length > 0) {
-    const { error: deleteError } = await supabase.from("exam_questions").delete().in("id", existingIds);
-    if (deleteError) throw new Error(deleteError.message);
-  }
-
-  const completedAt = new Date().toISOString();
-  const { error: updateError } = await supabase
-    .from("exams")
-    .update({ status: "ready", ai_error: null, processing_completed_at: completedAt })
-    .eq("id", examId);
-  if (updateError) throw new Error(updateError.message);
-
-  await logAudit({
-    actorId,
-    action: "exam_processing_completed",
-    resourceType: "exam",
-    resourceId: examId,
-    afterData: { question_count: questions.length }
-  });
-
-  return { status: "ready" as ExamStatus, error: null, questionCount: questions.length };
+  const { data: run } = await supabase
+    .from("exam_processing_runs")
+    .select("*")
+    .eq("exam_id", examId)
+    .eq("status", "processing")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!run?.response_id) throw new Error("The active processing run has no OpenAI response identifier.");
+  return finalizeExamProcessing(run.response_id, actorId);
 }

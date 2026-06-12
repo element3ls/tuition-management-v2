@@ -131,17 +131,20 @@ To allow downloading, mark the material downloadable and grant `download` permis
 
 Go to `/admin/exams`.
 
-1. Select a subject and one or more covered chapters, enter an exam title, and upload a PDF.
-2. Open the new exam and confirm the private source PDF is readable.
-3. Select **Generate questions and answers**.
-4. Wait for processing to finish. You can leave and revisit the page while it runs.
-5. Compare every generated question and worked answer with the PDF.
-6. Correct transcription, mathematical working, marks, source pages, and warnings.
+1. Select an intake mode, subject, covered chapters, title, and description.
+2. For **AI questions and answers**, upload one PDF, open the exam, and start AI processing.
+3. For **Teacher HTML answers**, upload one PDF, one HTML answer file, and any images referenced as `assets/filename.ext`; then start question-only AI transcription.
+4. For **Handwritten question and answer images**, open the created draft, add question groups, and upload ordered images on both sides.
+5. For either PDF mode, use the crop tool to preserve graphs, diagrams, tables, maps, or other visuals from the original paper.
+6. Compare all transcribed content with the source, correct marks and page references, resolve warnings, and add or reorder questions and assets as needed.
 7. Select **Save draft** while reviewing.
-8. Clear every review warning after resolving it.
-9. Select **Approve and publish entire exam** only when every answer is ready.
+8. Select **Approve and publish entire exam** only when every question satisfies its mode.
 
-Published exams appear on the subject page and on each selected chapter page. Access normally inherits from the subject or year; use a direct exam access grant only for an exceptional release. Students never receive the source PDF. Published exams are read-only, so corrections require uploading a revised exam rather than silently changing approved answers.
+Teacher HTML uses one `<section data-question-number="...">` for each answer. Duplicate, missing, or extra question numbers block import. External image URLs, scripts, styles, event handlers, forms, frames, links, and embedded objects are not accepted. Math can use `<span data-math>...</span>` or `<div data-math-display>...</div>`.
+
+An AI-marked visual requirement blocks publication until a crop is attached or a teacher explicitly confirms that a separate visual is unnecessary. Every handwritten group requires at least one question image and one answer image.
+
+Published exams appear on the subject page and on each selected chapter page. Access normally inherits from the subject or year; use a direct exam access grant only for an exceptional release. Students never receive source PDFs, raw HTML, or original staff uploads. Published exams are read-only, so corrections require uploading a revised exam rather than silently changing approved answers.
 
 The student viewer uses personalized watermarks and blocks common copy, right-click, save, and print actions. These are deterrents only and cannot guarantee protection from screenshots, cameras, OCR, or technical extraction.
 

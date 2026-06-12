@@ -16,7 +16,7 @@ describe("searchAccessibleContent", () => {
   it("does not return unpublished content", async () => {
     const data = cloneDemoData();
     data.chapters[0].status = "draft";
-    data.exams[0].status = "ready";
+    data.exams[0].status = "review";
 
     await expect(searchAccessibleContent({ userId: demoIds.student, query: "linear", data })).resolves.toEqual([]);
   });

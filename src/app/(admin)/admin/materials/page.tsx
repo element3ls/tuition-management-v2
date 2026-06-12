@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge, statusOptions } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ export default async function MaterialsPage() {
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Solution materials" }]} />
       <PageHeading
         title="Solution materials"
         description="Maintain private solution files, metadata, download permissions, and publishing status."
@@ -61,19 +63,17 @@ export default async function MaterialsPage() {
             <TableRow>
               <TableHead>Title</TableHead>
               <TableHead>File</TableHead>
-              <TableHead>Size</TableHead>
               <TableHead>Uploaded</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[110px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.solutionMaterials.length === 0 ? <EmptyTable colSpan={6} label="No materials yet." /> : null}
+            {data.solutionMaterials.length === 0 ? <EmptyTable colSpan={5} label="No materials yet." /> : null}
             {data.solutionMaterials.map((material) => (
               <TableRow key={material.id}>
                 <TableCell><div className="font-medium">{material.title}</div><div className="text-xs text-muted-foreground">{material.description ?? "No description"}</div></TableCell>
-                <TableCell>{material.file_name}</TableCell>
-                <TableCell>{Math.ceil(material.file_size_bytes / 1024)} KB</TableCell>
+                <TableCell><div>{material.file_name}</div><div className="font-mono text-xs text-muted-foreground">{Math.ceil(material.file_size_bytes / 1024)} KB</div></TableCell>
                 <TableCell>{formatDistanceToNow(new Date(material.created_at), { addSuffix: true })}</TableCell>
                 <TableCell><StatusBadge status={material.status} /></TableCell>
                 <TableCell className="text-right">

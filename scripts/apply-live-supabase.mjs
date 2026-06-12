@@ -172,6 +172,133 @@ async function seedPublicData(client, ids) {
 
   await client.query(
     `
+    insert into public.exams (
+      id, subject_id, title, description, source_bucket, source_key, source_file_name, source_mime_type,
+      source_size_bytes, intake_mode, status, processing_status, ai_model, uploaded_by, approved_by, approved_at, published_at
+    )
+    values (
+      '72000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000001',
+      'Linear Equations Practice Exam',
+      'Reviewed questions and worked answers.',
+      'exam-sources',
+      'demo/linear-equations-exam.pdf',
+      'linear-equations-exam.pdf',
+      'application/pdf',
+      32768,
+      'ai_solved',
+      'published',
+      'completed',
+      'gpt-5.4-mini',
+      $1,
+      $1,
+      now(),
+      now()
+    )
+    on conflict (id) do update
+    set title = excluded.title,
+        subject_id = excluded.subject_id,
+        description = excluded.description,
+        intake_mode = excluded.intake_mode,
+        status = excluded.status,
+        processing_status = excluded.processing_status,
+        approved_by = excluded.approved_by,
+        approved_at = excluded.approved_at,
+        published_at = excluded.published_at;
+
+    insert into public.exam_chapters (exam_id, chapter_id)
+    values ('72000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001')
+    on conflict (exam_id, chapter_id) do nothing;
+
+    insert into public.exam_questions (
+      id, exam_id, question_number, question_text, answer_text, question_format, answer_format,
+      marks, source_pages, requires_visual, visual_not_needed, sort_order
+    )
+    values
+      (
+        '73000000-0000-4000-8000-000000000001',
+        '72000000-0000-4000-8000-000000000001',
+        '1',
+        'Solve $2x + 5 = 17$.',
+        'Subtract 5 from both sides: $2x = 12$. Divide by 2: $\\boxed{x = 6}$.',
+        'markdown',
+        'markdown',
+        2,
+        array[1],
+        false,
+        false,
+        1
+      ),
+      (
+        '73000000-0000-4000-8000-000000000002',
+        '72000000-0000-4000-8000-000000000001',
+        '2',
+        'Solve $3(x - 2) = 15$.',
+        'Divide by 3: $x - 2 = 5$. Add 2: $\\boxed{x = 7}$.',
+        'markdown',
+        'markdown',
+        2,
+        array[1],
+        false,
+        false,
+        2
+      )
+    on conflict (id) do update
+    set question_number = excluded.question_number,
+        question_text = excluded.question_text,
+        answer_text = excluded.answer_text,
+        question_format = excluded.question_format,
+        answer_format = excluded.answer_format,
+        marks = excluded.marks,
+        source_pages = excluded.source_pages,
+        requires_visual = excluded.requires_visual,
+        visual_not_needed = excluded.visual_not_needed,
+        sort_order = excluded.sort_order;
+
+    insert into public.exam_assets (
+      exam_id, role, variant, storage_bucket, storage_key, file_name, mime_type, size_bytes,
+      upload_status, student_visible, uploaded_by
+    )
+    values (
+      '72000000-0000-4000-8000-000000000001',
+      'source_pdf',
+      'raw',
+      'exam-sources',
+      'demo/linear-equations-exam.pdf',
+      'linear-equations-exam.pdf',
+      'application/pdf',
+      32768,
+      'ready',
+      false,
+      $1
+    )
+    on conflict (storage_bucket, storage_key) do update
+    set upload_status = excluded.upload_status;
+
+    insert into public.exam_processing_runs (
+      id, exam_id, mode, status, model, response_id, started_by, started_at, completed_at
+    )
+    values (
+      '75000000-0000-4000-8000-000000000001',
+      '72000000-0000-4000-8000-000000000001',
+      'ai_solved',
+      'completed',
+      'gpt-5.4-mini',
+      'demo-exam-response',
+      $1,
+      now(),
+      now()
+    )
+    on conflict (id) do update
+    set status = excluded.status,
+        model = excluded.model,
+        completed_at = excluded.completed_at;
+  `,
+    [ids.adminId]
+  );
+
+  await client.query(
+    `
     insert into public.access_grants (id, grantee_type, grantee_id, resource_type, resource_id, permission, starts_at, expires_at, granted_by)
     values ('80000000-0000-4000-8000-000000000001', 'group', '10000000-0000-4000-8000-000000000001', 'year', '20000000-0000-4000-8000-000000000001', 'download', now() - interval '1 day', null, $1)
     on conflict (id) do update set permission = excluded.permission, revoked_at = null, revoked_by = null;
@@ -201,9 +328,14 @@ async function verify(client) {
       (select count(*)::int from public.questions) as questions,
       (select count(*)::int from public.recordings) as recordings,
       (select count(*)::int from public.solution_materials) as materials,
+      (select count(*)::int from public.exams) as exams,
+      (select count(*)::int from public.exam_questions) as exam_questions,
+      (select count(*)::int from public.exam_assets) as exam_assets,
+      (select count(*)::int from public.exam_processing_runs) as exam_processing_runs,
       (select count(*)::int from public.access_grants where revoked_at is null) as active_grants,
       (select count(*)::int from storage.buckets where id = 'solution-materials' and public = false) as private_solution_buckets,
       (select count(*)::int from storage.buckets where id = 'exam-sources' and public = false) as private_exam_buckets,
+      (select count(*)::int from storage.buckets where id = 'exam-assets' and public = false) as private_exam_asset_buckets,
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exams') as exam_tables,
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exam_chapters') as exam_chapter_tables,
       (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exams' and column_name = 'subject_id') as exam_subject_columns,
@@ -212,7 +344,7 @@ async function verify(client) {
   return rows[0];
 }
 
-async function uploadDemoMaterial(supabase) {
+async function uploadDemoFiles(supabase) {
   const pdf = Buffer.from(
     [
       "%PDF-1.4",
@@ -241,7 +373,12 @@ async function uploadDemoMaterial(supabase) {
     upsert: true
   });
   if (error) throw error;
-  console.log("Uploaded demo solution material file");
+  const { error: examError } = await supabase.storage.from("exam-sources").upload("demo/linear-equations-exam.pdf", pdf, {
+    contentType: "application/pdf",
+    upsert: true
+  });
+  if (examError) throw examError;
+  console.log("Uploaded demo solution and exam files");
 }
 
 loadEnvFile(".env.local");
@@ -281,7 +418,7 @@ try {
 
   await seedPublicData(client, { studentId: student.id, adminId: admin.id });
   console.log("Seeded public data");
-  await uploadDemoMaterial(supabase);
+  await uploadDemoFiles(supabase);
 
   if (credentials.length > 0) {
     mkdirSync(".supabase", { recursive: true });

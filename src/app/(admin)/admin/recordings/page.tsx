@@ -1,4 +1,5 @@
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge, statusOptions } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,7 @@ export default async function RecordingsPage() {
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Recordings" }]} />
       <PageHeading
         title="Recordings"
         description="Maintain YouTube embeds, chapter links, transcript metadata, and publishing status."
@@ -82,7 +84,7 @@ export default async function RecordingsPage() {
             {data.recordings.length === 0 ? <EmptyTable colSpan={6} label="No recordings yet." /> : null}
             {data.recordings.map((recording) => (
               <TableRow key={recording.id}>
-                <TableCell><div className="font-medium">{recording.title}</div><div className="text-xs text-muted-foreground">{recording.duration_seconds ?? 0}s</div></TableCell>
+                <TableCell><div className="font-medium">{recording.title}</div><div className="font-mono text-xs text-muted-foreground">{Math.round((recording.duration_seconds ?? 0) / 60)} min</div></TableCell>
                 <TableCell>{data.chapters.find((chapter) => chapter.id === recording.chapter_id)?.title}</TableCell>
                 <TableCell>{recording.youtube_video_id}</TableCell>
                 <TableCell><StatusBadge status={recording.transcript_review_status} /></TableCell>

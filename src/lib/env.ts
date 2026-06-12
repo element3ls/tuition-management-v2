@@ -43,3 +43,9 @@ export function getOpenAIEnv() {
     model: process.env.OPENAI_EXAM_MODEL?.trim() || "gpt-5.4-mini"
   };
 }
+
+export function getOpenAIWebhookSecret() {
+  const secret = process.env.OPENAI_WEBHOOK_SECRET;
+  if (!secret) throw new Error("OPENAI_WEBHOOK_SECRET is not configured.");
+  return secret;
+}

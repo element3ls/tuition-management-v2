@@ -105,7 +105,7 @@ on conflict (id) do update set title = excluded.title, description = excluded.de
 
 insert into public.exams (
   id, subject_id, title, description, source_bucket, source_key, source_file_name, source_mime_type,
-  source_size_bytes, status, ai_model, uploaded_by, approved_by, approved_at, published_at
+  source_size_bytes, intake_mode, status, processing_status, ai_model, uploaded_by, approved_by, approved_at, published_at
 )
 values (
   '72000000-0000-4000-8000-000000000001',
@@ -117,7 +117,9 @@ values (
   'linear-equations-exam.pdf',
   'application/pdf',
   32768,
+  'ai_solved',
   'published',
+  'completed',
   'gpt-5.4-mini',
   '00000000-0000-4000-8000-000000000002',
   '00000000-0000-4000-8000-000000000002',
@@ -128,7 +130,9 @@ on conflict (id) do update
 set title = excluded.title,
     subject_id = excluded.subject_id,
     description = excluded.description,
+    intake_mode = excluded.intake_mode,
     status = excluded.status,
+    processing_status = excluded.processing_status,
     approved_by = excluded.approved_by,
     approved_at = excluded.approved_at,
     published_at = excluded.published_at;
@@ -141,7 +145,8 @@ values (
 on conflict (exam_id, chapter_id) do nothing;
 
 insert into public.exam_questions (
-  id, exam_id, question_number, question_text, answer_text, marks, source_pages, sort_order
+  id, exam_id, question_number, question_text, answer_text, question_format, answer_format,
+  marks, source_pages, requires_visual, visual_not_needed, sort_order
 )
 values
   (
@@ -150,8 +155,12 @@ values
     '1',
     'Solve $2x + 5 = 17$.',
     'Subtract 5 from both sides: $2x = 12$. Divide by 2: $\boxed{x = 6}$.',
+    'markdown',
+    'markdown',
     2,
     array[1],
+    false,
+    false,
     1
   ),
   (
@@ -160,17 +169,67 @@ values
     '2',
     'Solve $3(x - 2) = 15$.',
     'Divide by 3: $x - 2 = 5$. Add 2: $\boxed{x = 7}$.',
+    'markdown',
+    'markdown',
     2,
     array[1],
+    false,
+    false,
     2
   )
 on conflict (id) do update
 set question_number = excluded.question_number,
     question_text = excluded.question_text,
     answer_text = excluded.answer_text,
+    question_format = excluded.question_format,
+    answer_format = excluded.answer_format,
     marks = excluded.marks,
     source_pages = excluded.source_pages,
+    requires_visual = excluded.requires_visual,
+    visual_not_needed = excluded.visual_not_needed,
     sort_order = excluded.sort_order;
+
+insert into public.exam_assets (
+  id, exam_id, role, variant, storage_bucket, storage_key, file_name, mime_type, size_bytes,
+  upload_status, student_visible, uploaded_by
+)
+values (
+  '74000000-0000-4000-8000-000000000001',
+  '72000000-0000-4000-8000-000000000001',
+  'source_pdf',
+  'raw',
+  'exam-sources',
+  'demo/linear-equations-exam.pdf',
+  'linear-equations-exam.pdf',
+  'application/pdf',
+  32768,
+  'ready',
+  false,
+  '00000000-0000-4000-8000-000000000002'
+)
+on conflict (storage_bucket, storage_key) do update
+set storage_bucket = excluded.storage_bucket,
+    storage_key = excluded.storage_key,
+    upload_status = excluded.upload_status;
+
+insert into public.exam_processing_runs (
+  id, exam_id, mode, status, model, response_id, started_by, started_at, completed_at
+)
+values (
+  '75000000-0000-4000-8000-000000000001',
+  '72000000-0000-4000-8000-000000000001',
+  'ai_solved',
+  'completed',
+  'gpt-5.4-mini',
+  'demo-exam-response',
+  '00000000-0000-4000-8000-000000000002',
+  now(),
+  now()
+)
+on conflict (id) do update
+set status = excluded.status,
+    model = excluded.model,
+    completed_at = excluded.completed_at;
 
 insert into public.access_grants (id, grantee_type, grantee_id, resource_type, resource_id, permission, starts_at, expires_at, granted_by)
 values ('80000000-0000-4000-8000-000000000001', 'group', '10000000-0000-4000-8000-000000000001', 'year', '20000000-0000-4000-8000-000000000001', 'download', now() - interval '1 day', null, '00000000-0000-4000-8000-000000000002')

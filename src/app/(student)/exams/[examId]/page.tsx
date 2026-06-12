@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { ExamQuestionList } from "@/components/content/exam-question-list";
 import { ProtectedExamViewer } from "@/components/content/protected-exam-viewer";
@@ -23,6 +24,9 @@ export default async function StudentExamPage({ params }: { params: Promise<{ ex
   const questions = data.examQuestions
     .filter((question) => question.exam_id === exam.id)
     .sort((a, b) => a.sort_order - b.sort_order);
+  const assets = data.examAssets.filter(
+    (asset) => asset.exam_id === exam.id && asset.variant === "display" && asset.student_visible
+  );
 
   await logActivityEvent({
     userId: user.id,
@@ -37,15 +41,38 @@ export default async function StudentExamPage({ params }: { params: Promise<{ ex
 
   return (
     <>
-      <PageHeading title={exam.title} description={exam.description} />
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: exam.title },
+        ]}
+      />
+      <PageHeading
+        title={exam.title}
+        description={exam.description}
+        eyebrow={`${questions.length} ${questions.length === 1 ? "question" : "questions"}`}
+      />
       <ProtectedExamViewer watermark={watermark}>
         <ExamQuestionList
+          examId={exam.id}
           questions={questions.map((question) => ({
             id: question.id,
             questionNumber: question.question_number,
             questionText: question.question_text,
             answerText: question.answer_text,
-            marks: question.marks
+            questionHtml: question.question_html,
+            answerHtml: question.answer_html,
+            questionFormat: question.question_format,
+            answerFormat: question.answer_format,
+            marks: question.marks,
+            assets: assets
+              .filter((asset) => asset.question_id === question.id)
+              .map((asset) => ({
+                id: asset.id,
+                role: asset.role as "question_image" | "answer_image" | "question_visual" | "answer_visual",
+                sortOrder: asset.sort_order,
+                altText: asset.alt_text
+              }))
           }))}
         />
       </ProtectedExamViewer>

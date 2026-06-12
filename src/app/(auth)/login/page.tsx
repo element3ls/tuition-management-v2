@@ -2,8 +2,9 @@ import Link from "next/link";
 import { loginAction } from "@/features/auth/actions";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { TutorEaseMark } from "@/components/layout/app-header";
 
 export default async function LoginPage({
   searchParams
@@ -13,10 +14,15 @@ export default async function LoginPage({
   const params = await searchParams;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
-      <Card>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-background to-muted/60 px-4">
+      <div className="mb-6 flex flex-col items-center gap-2">
+        <TutorEaseMark size={36} />
+        <span className="text-base font-semibold tracking-tight text-foreground">TutorEase</span>
+      </div>
+      <Card className="w-full max-w-[400px]">
         <CardHeader>
-          <CardTitle>Log in</CardTitle>
+          <CardTitle>Log in to your account</CardTitle>
+          <CardDescription>Enter your email and password to access your account.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={loginAction} className="space-y-4">
@@ -34,15 +40,21 @@ export default async function LoginPage({
               </label>
               <Input id="password" name="password" type="password" placeholder="password" required />
             </div>
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground" htmlFor="remember">
+                <input id="remember" name="remember" type="checkbox" className="size-4 rounded border-input" />
+                Remember me
+              </label>
+              <Link className="text-sm text-primary hover:underline" href="/forgot-password">
+                Forgot password?
+              </Link>
+            </div>
             <Button className="w-full" type="submit">
               Log in
             </Button>
             <p className="text-sm text-muted-foreground">
               Demo users: `student@example.com` or `admin@example.com` with any non-empty password.
             </p>
-            <Link className="text-sm text-primary hover:underline" href="/forgot-password">
-              Forgot password?
-            </Link>
           </form>
         </CardContent>
       </Card>
