@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge, statusOptions } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ export default async function MaterialsPage() {
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Solution materials" }]} />
       <PageHeading
         title="Solution materials"
         description="Maintain private solution files, metadata, download permissions, and publishing status."

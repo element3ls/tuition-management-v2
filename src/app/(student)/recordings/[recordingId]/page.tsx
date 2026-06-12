@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireStudentAccess } from "@/lib/auth/session";
@@ -43,10 +43,12 @@ export default async function RecordingPage({ params }: { params: Promise<{ reco
 
   return (
     <>
-      <Link href="/dashboard" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <IconArrowLeft className="size-4" />
-        Dashboard
-      </Link>
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: recording.title },
+        ]}
+      />
       <PageHeading title={recording.title} description={chapter ? `Chapter: ${chapter.title}` : recording.description} />
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <Card>

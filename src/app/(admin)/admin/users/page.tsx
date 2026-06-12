@@ -1,4 +1,5 @@
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Alert } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
@@ -30,6 +31,7 @@ export default async function UsersPage({
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Students" }]} />
       <PageHeading
         title="Students"
         description="Maintain student profiles, login emails, guardians, and account status."

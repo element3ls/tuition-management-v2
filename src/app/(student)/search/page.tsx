@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { IconBook2, IconFileCheck, IconFileText, IconHelpCircle, IconVideo } from "@tabler/icons-react";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Search" }]} />
       <PageHeading title="Search" description="Search only returns content assigned to your account." />
       <form className="mb-6 flex gap-2" action="/search">
         <Input name="q" defaultValue={q} placeholder="Search keyword" />

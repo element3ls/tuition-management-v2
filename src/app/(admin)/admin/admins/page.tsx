@@ -1,4 +1,5 @@
 import { AdminDialog, CreateButton, EmptyTable, Field, StatusBadge } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,9 @@ export default async function AdminUsersPage() {
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Admins" }]} />
       <PageHeading
         title="Admins"
-        eyebrow="Admins"
         description="Create and review admin console accounts. Super-admin only."
         actions={
           <AdminDialog title="Create admin" description="Create login access for a normal admin account." trigger={<CreateButton>New admin</CreateButton>}>

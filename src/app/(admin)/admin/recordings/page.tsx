@@ -1,4 +1,5 @@
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge, statusOptions } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,7 @@ export default async function RecordingsPage() {
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Recordings" }]} />
       <PageHeading
         title="Recordings"
         description="Maintain YouTube embeds, chapter links, transcript metadata, and publishing status."

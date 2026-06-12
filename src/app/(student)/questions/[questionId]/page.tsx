@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconFileText, IconVideo } from "@tabler/icons-react";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireStudentAccess } from "@/lib/auth/session";
@@ -28,38 +29,15 @@ export default async function QuestionPage({ params }: { params: Promise<{ quest
 
   return (
     <>
-      <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-sm">
-        <Link href="/dashboard" className="font-medium text-primary hover:underline">
-          Dashboard
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        {year ? (
-          <>
-            <Link href={`/years/${year.id}`} className="font-medium text-primary hover:underline">
-              {year.name}
-            </Link>
-            <span className="text-muted-foreground">/</span>
-          </>
-        ) : null}
-        {subject ? (
-          <>
-            <Link href={`/subjects/${subject.id}`} className="font-medium text-primary hover:underline">
-              {subject.name}
-            </Link>
-            <span className="text-muted-foreground">/</span>
-          </>
-        ) : null}
-        {chapter ? (
-          <>
-            <Link href={`/chapters/${chapter.id}`} className="font-medium text-primary hover:underline">
-              {chapter.title}
-            </Link>
-            <span className="text-muted-foreground">/</span>
-          </>
-        ) : null}
-        <span className="font-medium text-foreground">{question.title}</span>
-      </nav>
-
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          ...(year ? [{ label: year.name, href: `/years/${year.id}` }] : []),
+          ...(subject ? [{ label: subject.name, href: `/subjects/${subject.id}` }] : []),
+          ...(chapter ? [{ label: chapter.title, href: `/chapters/${chapter.id}` }] : []),
+          { label: question.title },
+        ]}
+      />
       <PageHeading eyebrow={chapter?.title} title={question.title} description={question.description ?? undefined} />
 
       <Card className="mb-4">

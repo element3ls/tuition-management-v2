@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconBook2, IconFileCheck, IconFileText } from "@tabler/icons-react";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireStudentAccess } from "@/lib/auth/session";
@@ -51,22 +52,13 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
 
   return (
     <>
-      <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-sm">
-        <Link href="/dashboard" className="font-medium text-primary hover:underline">
-          Dashboard
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        {year ? (
-          <>
-            <Link href={`/years/${year.id}`} className="font-medium text-primary hover:underline">
-              {year.name}
-            </Link>
-            <span className="text-muted-foreground">/</span>
-          </>
-        ) : null}
-        <span className="font-medium text-foreground">{subject.name}</span>
-      </nav>
-
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          ...(year ? [{ label: year.name, href: `/years/${year.id}` }] : []),
+          { label: subject.name },
+        ]}
+      />
       <PageHeading eyebrow={year?.name} title={subject.name} description={subject.description ?? undefined} />
 
       {exams.length > 0 ? (

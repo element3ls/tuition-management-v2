@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { AdminDialog, CreateButton, EmptyTable, StatusBadge } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ export default async function ExamsPage({
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Exams" }]} />
       <PageHeading
         title="Exam intake"
         description="Upload source PDFs, generate draft answers, review and publish approved Q&A."

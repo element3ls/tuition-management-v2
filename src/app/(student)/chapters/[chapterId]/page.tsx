@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconFileCheck, IconFileText, IconVideo } from "@tabler/icons-react";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,30 +49,14 @@ export default async function ChapterPage({ params }: { params: Promise<{ chapte
 
   return (
     <>
-      <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-sm">
-        <Link href="/dashboard" className="font-medium text-primary hover:underline">
-          Dashboard
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        {year ? (
-          <>
-            <Link href={`/years/${year.id}`} className="font-medium text-primary hover:underline">
-              {year.name}
-            </Link>
-            <span className="text-muted-foreground">/</span>
-          </>
-        ) : null}
-        {subject ? (
-          <>
-            <Link href={`/subjects/${subject.id}`} className="font-medium text-primary hover:underline">
-              {subject.name}
-            </Link>
-            <span className="text-muted-foreground">/</span>
-          </>
-        ) : null}
-        <span className="font-medium text-foreground">{chapter.title}</span>
-      </nav>
-
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          ...(year ? [{ label: year.name, href: `/years/${year.id}` }] : []),
+          ...(subject ? [{ label: subject.name, href: `/subjects/${subject.id}` }] : []),
+          { label: chapter.title },
+        ]}
+      />
       <PageHeading eyebrow={subject?.name} title={chapter.title} description={chapter.description ?? undefined} />
 
       <div className="grid gap-4 lg:grid-cols-3">

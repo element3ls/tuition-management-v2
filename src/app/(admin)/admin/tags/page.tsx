@@ -1,4 +1,5 @@
 import { AdminDialog, CreateButton, EditButton, EmptyTable, Field } from "@/components/admin/admin-ui";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +12,9 @@ export default async function TagsPage() {
 
   return (
     <>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Tags" }]} />
       <PageHeading
         title="Tags"
-        eyebrow="Tags"
         description="Edit keyword labels and slugs for content discovery and AI metadata."
         actions={
           <AdminDialog title="Create tag" trigger={<CreateButton>New tag</CreateButton>}>

@@ -1,3 +1,4 @@
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,8 @@ export default async function AuditLogsPage() {
 
   return (
     <>
-      <PageHeading title="Audit logs" description="Sensitive admin actions recorded with actor, action, resource, and timestamp." />
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Audit trail" }]} />
+      <PageHeading title="Audit trail" description="Sensitive admin actions recorded with actor, action, resource, and timestamp." />
       <Card>
         <CardHeader>
           <CardTitle>Audit trail</CardTitle>

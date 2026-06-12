@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { IconArrowLeft, IconFile, IconFileTypePdf } from "@tabler/icons-react";
+import { IconFile, IconFileTypePdf } from "@tabler/icons-react";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,10 +26,12 @@ export default async function MaterialPage({ params }: { params: Promise<{ mater
 
   return (
     <>
-      <Link href="/dashboard" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <IconArrowLeft className="size-4" />
-        Dashboard
-      </Link>
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: material.title },
+        ]}
+      />
       <PageHeading title={material.title} description={material.description} />
       <Card className="max-w-xl">
         <CardHeader>

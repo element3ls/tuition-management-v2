@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconBook2 } from "@tabler/icons-react";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireStudentAccess } from "@/lib/auth/session";
@@ -26,15 +27,13 @@ export default async function YearPage({ params }: { params: Promise<{ yearId: s
 
   return (
     <>
-      <nav className="mb-4 flex items-center gap-1.5 text-sm flex-wrap">
-        <Link href="/dashboard" className="font-medium text-primary hover:underline">
-          Dashboard
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <span className="font-medium text-foreground">{year.name}</span>
-      </nav>
-
-      <PageHeading eyebrow={year.name} title={year.name} description={year.description ?? "Your assigned subjects for this year."} />
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: year.name },
+        ]}
+      />
+      <PageHeading title={year.name} description={year.description ?? "Your assigned subjects for this year."} />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {subjects.map((subject) => (

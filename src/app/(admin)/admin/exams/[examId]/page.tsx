@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { StatusBadge } from "@/components/admin/admin-ui";
 import { Alert } from "@/components/ui/alert";
@@ -32,6 +33,13 @@ export default async function ExamReviewPage({ params }: { params: Promise<{ exa
 
   return (
     <>
+      <Breadcrumb
+        items={[
+          { label: "Admin", href: "/admin" },
+          { label: "Exams", href: "/admin/exams" },
+          { label: exam.title },
+        ]}
+      />
       <PageHeading title={exam.title} description={exam.description ?? `Exam under ${subject?.name ?? "unknown subject"}`} />
       <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
         <StatusBadge status={exam.status} />
