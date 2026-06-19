@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconFileText, IconVideo } from "@tabler/icons-react";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
+import { RichText } from "@/components/content/rich-text";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireStudentAccess } from "@/lib/auth/session";
@@ -48,7 +49,7 @@ export default async function QuestionPage({ params }: { params: Promise<{ quest
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-relaxed text-foreground">{question.question_text}</p>
+          <RichText className="text-foreground">{question.question_text}</RichText>
         </CardContent>
       </Card>
       <div className="grid gap-4 md:grid-cols-2">

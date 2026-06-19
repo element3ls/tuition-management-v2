@@ -3,12 +3,12 @@
 import { useMemo, useState } from "react";
 import { IconBook2, IconChevronRight, IconHelpCircle, IconStack2, IconListTree, IconArchive } from "@tabler/icons-react";
 import { AdminDialog, CheckField, CreateButton, EditButton, EmptyTable, Field, StatusBadge, statusOptions } from "@/components/admin/admin-ui";
+import { MarkdownLatexEditor } from "@/components/content/markdown-latex-editor";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import {
   archiveContentAction,
   createChapterAction,
@@ -333,7 +333,7 @@ export function ContentHierarchyManager({ data }: { data: AppData }) {
           <input name="resource_id" type="hidden" value={question.id} />
           <Field label="Chapter"><Select name="chapter_id" defaultValue={question.chapter_id}>{data.chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}</Select></Field>
           <Field label="Title"><Input name="title" defaultValue={question.title} required /></Field>
-          <Field label="Question text"><Textarea name="question_text" defaultValue={question.question_text} required /></Field>
+          <MarkdownLatexEditor label="Question text" name="question_text" defaultValue={question.question_text} required />
           <Field label="Description"><Input name="description" defaultValue={question.description ?? ""} /></Field>
           <Field label="Sort order"><Input name="sort_order" type="number" defaultValue={question.sort_order} /></Field>
           <Field label="Status"><Select name="status" defaultValue={question.status}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</Select></Field>
@@ -387,7 +387,7 @@ export function ContentHierarchyManager({ data }: { data: AppData }) {
               <form action={createQuestionAction} className="grid gap-3" data-mutation-form>
                 <Field label="Chapter"><Select name="chapter_id">{data.chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}</Select></Field>
                 <Field label="Title"><Input name="title" required /></Field>
-                <Field label="Question text"><Textarea name="question_text" required /></Field>
+                <MarkdownLatexEditor label="Question text" name="question_text" required />
                 <Field label="Description"><Input name="description" /></Field>
                 <Field label="Sort order"><Input name="sort_order" type="number" defaultValue={0} /></Field>
                 <Field label="Status"><Select name="status" defaultValue="draft">{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</Select></Field>
