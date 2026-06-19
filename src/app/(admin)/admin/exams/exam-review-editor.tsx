@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ExamQuestionList } from "@/components/content/exam-question-list";
+import { MarkdownLatexEditor } from "@/components/content/markdown-latex-editor";
 import { ProtectedExamViewer } from "@/components/content/protected-exam-viewer";
 import { ExamAssetUploader } from "@/app/(admin)/admin/exams/exam-asset-uploader";
 import { PdfCropTool } from "@/app/(admin)/admin/exams/pdf-crop-tool";
@@ -311,26 +312,24 @@ export function ExamReviewEditor({
                 </div>
 
                 {question.questionFormat === "markdown" ? (
-                  <label className="grid gap-1.5 text-sm font-medium">
-                    Question Markdown
-                    <Textarea
-                      value={question.questionText ?? ""}
-                      onChange={(event) => update(index, "questionText", event.target.value)}
-                      className="min-h-28 font-mono text-sm"
-                      disabled={published || busy}
-                    />
-                  </label>
+                  <MarkdownLatexEditor
+                    label="Question Markdown"
+                    name={`questions.${index}.questionText`}
+                    value={question.questionText ?? ""}
+                    onValueChange={(value) => update(index, "questionText", value)}
+                    textareaClassName="min-h-28"
+                    disabled={published || busy}
+                  />
                 ) : null}
                 {question.answerFormat === "markdown" ? (
-                  <label className="grid gap-1.5 text-sm font-medium">
-                    Worked answer Markdown
-                    <Textarea
-                      value={question.answerText ?? ""}
-                      onChange={(event) => update(index, "answerText", event.target.value)}
-                      className="min-h-48 font-mono text-sm"
-                      disabled={published || busy}
-                    />
-                  </label>
+                  <MarkdownLatexEditor
+                    label="Worked answer Markdown"
+                    name={`questions.${index}.answerText`}
+                    value={question.answerText ?? ""}
+                    onValueChange={(value) => update(index, "answerText", value)}
+                    textareaClassName="min-h-48"
+                    disabled={published || busy}
+                  />
                 ) : null}
                 {question.answerFormat === "html" ? (
                   <label className="grid gap-1.5 text-sm font-medium">

@@ -12,6 +12,8 @@ type MarkdownLatexEditorProps = Omit<React.ComponentProps<"textarea">, "children
   label: string;
   name: string;
   defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
   textareaClassName?: string;
 };
 
@@ -61,6 +63,8 @@ export function MarkdownLatexEditor({
   name,
   id,
   defaultValue = "",
+  value: controlledValue,
+  onValueChange,
   className,
   textareaClassName,
   disabled,
@@ -74,7 +78,8 @@ export function MarkdownLatexEditor({
   const previewTabId = `${textareaId}-preview-tab`;
   const previewId = `${textareaId}-preview`;
   const [view, setView] = useState<EditorView>("write");
-  const [value, setValue] = useState(defaultValue);
+  const [internalValue, setInternalValue] = useState(defaultValue);
+  const value = controlledValue ?? internalValue;
 
   const tabClassName = (tab: EditorView) =>
     cn(
@@ -85,6 +90,13 @@ export function MarkdownLatexEditor({
 
   const toolbarButtonClassName =
     "inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-border bg-background px-2 text-xs font-semibold text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50";
+
+  const updateValue = (nextValue: string) => {
+    if (controlledValue === undefined) {
+      setInternalValue(nextValue);
+    }
+    onValueChange?.(nextValue);
+  };
 
   const insertTemplate = (action: InsertTemplate) => {
     const textarea = textareaRef.current;
@@ -99,7 +111,7 @@ export function MarkdownLatexEditor({
     const cursorStart = shouldSelectFallback ? selectionStart + fallbackStart : selectionStart + snippet.length;
     const cursorEnd = shouldSelectFallback ? cursorStart + insertedValue.length : cursorStart;
 
-    setValue(nextValue);
+    updateValue(nextValue);
     setView("write");
     window.setTimeout(() => {
       textareaRef.current?.focus();
@@ -176,7 +188,7 @@ export function MarkdownLatexEditor({
           value={value}
           disabled={disabled}
           onChange={(event) => {
-            setValue(event.target.value);
+            updateValue(event.target.value);
             onChange?.(event);
           }}
           className={cn("min-h-48 font-mono text-sm", textareaClassName)}
