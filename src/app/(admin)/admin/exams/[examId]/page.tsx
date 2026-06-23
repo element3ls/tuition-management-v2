@@ -30,6 +30,7 @@ export default async function ExamReviewPage({ params }: { params: Promise<{ exa
   );
   const canProcess = exam.intake_mode !== "handwritten_images" && !["published", "archived"].includes(exam.status);
   const canReview = exam.status === "review" || exam.status === "published";
+  const sourcePdfContentHeight = canReview ? "h-[82vh] xl:h-[calc(100%-4rem)]" : "h-[82vh]";
 
   return (
     <>
@@ -68,7 +69,7 @@ export default async function ExamReviewPage({ params }: { params: Promise<{ exa
         {hasSourcePdf ? (
           <Card className={canReview ? "xl:sticky xl:top-4 xl:h-[calc(100vh-2rem)]" : ""}>
             <CardHeader><CardTitle>Staff-only source PDF</CardTitle></CardHeader>
-            <CardContent className="h-[70vh] xl:h-[calc(100%-4rem)]">
+            <CardContent className={sourcePdfContentHeight}>
               <iframe
                 src={`/api/admin/exams/${exam.id}/source`}
                 title={`${exam.title} source PDF`}
