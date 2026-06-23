@@ -98,7 +98,7 @@ describe("exam review editor", () => {
     expect(document.querySelectorAll(".katex").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("adds and removes draft questions", () => {
+  it("asks for confirmation before removing draft questions", () => {
     render(
       <ExamReviewEditor
         examId="exam-1"
@@ -115,6 +115,36 @@ describe("exam review editor", () => {
     expect(screen.getAllByLabelText("Question number")).toHaveLength(2);
 
     fireEvent.click(screen.getByRole("button", { name: "Delete question 2" }));
+    expect(screen.getByText("Delete question 2?")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByText("Delete question 2?")).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText("Question number")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete question 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete question" }));
     expect(screen.getAllByLabelText("Question number")).toHaveLength(1);
+  });
+
+  it("keeps visual upload tools collapsed until requested", () => {
+    render(
+      <ExamReviewEditor
+        examId="exam-1"
+        intakeMode="ai_solved"
+        examTitle="Algebra Exam"
+        examDescription={null}
+        questions={[question]}
+        assets={[]}
+        published={false}
+        hasSourcePdf
+      />
+    );
+
+    expect(screen.queryByText("Upload visual")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add visual" }));
+
+    expect(screen.getByText("Upload visual")).toBeInTheDocument();
+    expect(screen.getByText("Crop from source PDF")).toBeInTheDocument();
   });
 });

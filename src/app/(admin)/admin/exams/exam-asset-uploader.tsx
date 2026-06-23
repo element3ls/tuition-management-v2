@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { uploadExamAsset } from "@/lib/exams/client-assets";
+import { cn } from "@/lib/utils";
 import type { ExamAsset, ExamAssetRole } from "@/types/domain";
 
 export function ExamAssetUploader({
@@ -13,12 +14,14 @@ export function ExamAssetUploader({
   role,
   multiple = true,
   label = "Upload images",
+  surface = true,
   onUploaded
 }: {
   examId: string;
   role: Extract<ExamAssetRole, "question_image" | "answer_image" | "question_visual" | "answer_visual">;
   multiple?: boolean;
   label?: string;
+  surface?: boolean;
   onUploaded: (assets: ExamAsset[]) => void;
 }) {
   const [files, setFiles] = useState<File[]>([]);
@@ -45,7 +48,7 @@ export function ExamAssetUploader({
   };
 
   return (
-    <div className="grid gap-2 rounded-md border bg-muted/20 p-3">
+    <div className={cn("grid gap-2", surface ? "rounded-md border bg-muted/20 p-3" : "")}>
       <div className="grid gap-2 sm:grid-cols-[1fr_130px_auto]">
         <Input
           type="file"

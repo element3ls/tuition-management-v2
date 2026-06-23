@@ -3,9 +3,28 @@
 import React, { useState } from "react";
 import DOMPurify from "dompurify";
 import { useRouter } from "next/navigation";
-import { IconArrowUp, IconArrowDown, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconChevronDown,
+  IconChevronRight,
+  IconFileTypePdf,
+  IconPhotoPlus,
+  IconPlus,
+  IconTrash,
+  IconX
+} from "@tabler/icons-react";
 import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ExamQuestionList } from "@/components/content/exam-question-list";
@@ -162,6 +181,27 @@ function withInlineMarker(question: EditableQuestion, asset: EditableAsset) {
   return question;
 }
 
+function hasAttachedVisual(question: EditableQuestion) {
+  return question.assets.some((asset) => asset.role === "question_visual" || asset.role === "answer_visual");
+}
+
+function initialExpandedIds(items: EditableQuestion[]) {
+  const needsAttention =
+    items.find(
+      (question) =>
+        question.reviewWarning || (question.requiresVisual && !question.visualNotNeeded && !hasAttachedVisual(question))
+    ) ?? items[0];
+
+  return needsAttention ? [needsAttention.id] : [];
+}
+
+function visualStatusFor(question: EditableQuestion) {
+  if (!question.requiresVisual) return null;
+  if (question.visualNotNeeded) return { label: "Visual waived", variant: "neutral" as const };
+  if (hasAttachedVisual(question)) return { label: "Visual attached", variant: "success" as const };
+  return { label: "Visual required", variant: "warning" as const };
+}
+
 export function ExamReviewEditor({
   examId,
   intakeMode,
@@ -169,7 +209,8 @@ export function ExamReviewEditor({
   examDescription,
   questions,
   assets,
-  published
+  published,
+  hasSourcePdf = false
 }: {
   examId: string;
   intakeMode: ExamIntakeMode;
@@ -178,14 +219,20 @@ export function ExamReviewEditor({
   questions: ExamQuestion[];
   assets: ExamAsset[];
   published: boolean;
+  hasSourcePdf?: boolean;
 }) {
   const router = useRouter();
-  const [items, setItems] = useState(questions.map((question) => toEditable(question, assets)));
+  const initialItems = React.useMemo(() => questions.map((question) => toEditable(question, assets)), [questions, assets]);
+  const [items, setItems] = useState(initialItems);
+  const [expandedQuestionIds, setExpandedQuestionIds] = useState(() => new Set(initialExpandedIds(initialItems)));
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [visualOptions, setVisualOptions] = useState<Record<string, VisualUploadOptions>>({});
+  const [visualPanelQuestionId, setVisualPanelQuestionId] = useState<string | null>(null);
+  const [sourcePdfOpen, setSourcePdfOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
 
   const normalizeOrder = (questionsToOrder: EditableQuestion[]) =>
     questionsToOrder.map((question, index) => ({ ...question, sortOrder: index + 1 }));
@@ -198,6 +245,41 @@ export function ExamReviewEditor({
       ...current,
       [questionId]: { ...(current[questionId] ?? { role: "question_visual", placement: "after_content" }), ...patch }
     }));
+  };
+
+  const toggleQuestion = (questionId: string) => {
+    setExpandedQuestionIds((current) => {
+      const next = new Set(current);
+      if (next.has(questionId)) {
+        next.delete(questionId);
+      } else {
+        next.add(questionId);
+      }
+      return next;
+    });
+  };
+
+  const expandQuestion = (questionId: string) => {
+    setExpandedQuestionIds((current) => new Set(current).add(questionId));
+  };
+
+  const deletePendingQuestion = () => {
+    if (!pendingDelete) return;
+    const deletedId = pendingDelete.id;
+    setItems((current) => normalizeOrder(current.filter((question) => question.id !== deletedId)));
+    setExpandedQuestionIds((current) => {
+      const next = new Set(current);
+      next.delete(deletedId);
+      return next;
+    });
+    setVisualPanelQuestionId((current) => (current === deletedId ? null : current));
+    setPendingDelete(null);
+  };
+
+  const addQuestion = () => {
+    const question = newQuestion(intakeMode, items.length + 1);
+    setItems((current) => [...current, question]);
+    expandQuestion(question.id);
   };
 
   const update = <K extends keyof EditableQuestion>(index: number, key: K, value: EditableQuestion[K]) => {
@@ -311,32 +393,77 @@ export function ExamReviewEditor({
       {message ? <Alert>{message}</Alert> : null}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-2">
         <p className="px-2 text-sm text-muted-foreground">Preview uses current unsaved edits.</p>
-        <div className="flex gap-1 rounded-md bg-muted p-1" role="group" aria-label="Exam review view">
-          <Button type="button" size="sm" variant={view === "edit" ? "default" : "secondary"} onClick={() => setView("edit")}>
-            Edit questions
-          </Button>
-          <Button type="button" size="sm" variant={view === "preview" ? "default" : "secondary"} onClick={() => setView("preview")}>
-            Student preview
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {hasSourcePdf ? (
+            <Button type="button" size="sm" variant="outline" onClick={() => setSourcePdfOpen(true)}>
+              <IconFileTypePdf className="size-3.5" />
+              Source PDF
+            </Button>
+          ) : null}
+          <div className="flex gap-1 rounded-md bg-muted p-1" role="group" aria-label="Exam review view">
+            <Button type="button" size="sm" variant={view === "edit" ? "default" : "secondary"} onClick={() => setView("edit")}>
+              Edit questions
+            </Button>
+            <Button type="button" size="sm" variant={view === "preview" ? "default" : "secondary"} onClick={() => setView("preview")}>
+              Student preview
+            </Button>
+          </div>
         </div>
       </div>
+      <Dialog open={sourcePdfOpen} onOpenChange={setSourcePdfOpen}>
+        <DialogContent className="h-[88vh] grid-rows-[auto_minmax(0,1fr)] sm:max-w-[min(96vw,1100px)]">
+          <DialogHeader className="pr-8">
+            <DialogTitle>Staff-only source PDF</DialogTitle>
+            <DialogDescription>Use this as a reference while reviewing the extracted questions.</DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0">
+            <iframe
+              src={`/api/admin/exams/${examId}/source`}
+              title={`${examTitle} source PDF`}
+              className="h-full w-full rounded-md border bg-muted"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {view === "edit" ? (
         <>
           {items.map((question, index) => {
             const currentVisualOption = visualOptionFor(question.id);
+            const isExpanded = expandedQuestionIds.has(question.id);
+            const isVisualPanelOpen = visualPanelQuestionId === question.id;
+            const visualStatus = visualStatusFor(question);
+            const assetCount = question.assets.length;
+            const questionLabel = question.questionNumber || String(index + 1);
 
             return (
             <section key={question.id} className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-2.5">
-                <h3 className="text-sm font-semibold">Question {question.questionNumber || index + 1}</h3>
-                {!published ? (
-                  <div className="flex gap-1">
+                <button
+                  type="button"
+                  className="flex min-w-0 items-center gap-2 text-left text-sm font-semibold"
+                  aria-expanded={isExpanded}
+                  aria-controls={`question-${question.id}-panel`}
+                  onClick={() => toggleQuestion(question.id)}
+                >
+                  {isExpanded ? <IconChevronDown className="size-4 shrink-0" /> : <IconChevronRight className="size-4 shrink-0" />}
+                  <span className="truncate">Question {questionLabel}</span>
+                </button>
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  {visualStatus ? <Badge variant={visualStatus.variant}>{visualStatus.label}</Badge> : null}
+                  {question.reviewWarning ? <Badge variant="warning">Review warning</Badge> : null}
+                  {assetCount > 0 ? (
+                    <Badge variant="info">
+                      {assetCount} asset{assetCount === 1 ? "" : "s"}
+                    </Badge>
+                  ) : null}
+                  {!published ? (
+                    <div className="flex gap-1">
                     <Button
                       type="button"
                       size="icon-sm"
                       variant="ghost"
-                      aria-label={`Move question ${question.questionNumber} up`}
+                      aria-label={`Move question ${questionLabel} up`}
                       disabled={index === 0}
                       onClick={() => moveQuestion(index, -1)}
                     >
@@ -346,7 +473,7 @@ export function ExamReviewEditor({
                       type="button"
                       size="icon-sm"
                       variant="ghost"
-                      aria-label={`Move question ${question.questionNumber} down`}
+                      aria-label={`Move question ${questionLabel} down`}
                       disabled={index === items.length - 1}
                       onClick={() => moveQuestion(index, 1)}
                     >
@@ -356,16 +483,18 @@ export function ExamReviewEditor({
                       type="button"
                       size="icon-sm"
                       variant="destructive"
-                      aria-label={`Delete question ${question.questionNumber}`}
-                      onClick={() => setItems((current) => normalizeOrder(current.filter((_, itemIndex) => itemIndex !== index)))}
+                      aria-label={`Delete question ${questionLabel}`}
+                      onClick={() => setPendingDelete({ id: question.id, label: questionLabel })}
                     >
                       <IconTrash className="size-3.5" />
                     </Button>
                   </div>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
 
-              <div className="grid gap-3 p-4">
+              {isExpanded ? (
+              <div id={`question-${question.id}-panel`} className="grid gap-3 p-4">
                 <div className="grid gap-3 sm:grid-cols-[1fr_120px_140px]">
                   <label className="grid gap-1.5 text-sm font-medium">
                     Question number
@@ -447,56 +576,78 @@ export function ExamReviewEditor({
                 ) : null}
 
                 {!published && intakeMode !== "handwritten_images" ? (
-                  <div className="grid gap-3 rounded-md border border-border bg-muted/20 p-3">
-                    <div className="grid gap-2 sm:grid-cols-[180px_180px]">
-                      <label className="grid gap-1 text-xs font-medium">
-                        Attach to
-                        <select
-                          className="h-8 rounded-sm border bg-background px-2 text-sm"
-                          value={currentVisualOption.role}
-                          disabled={busy}
-                          onChange={(event) =>
-                            updateVisualOption(question.id, { role: event.target.value as VisualUploadOptions["role"] })
-                          }
-                        >
-                          <option value="question_visual">Question content</option>
-                          <option value="answer_visual">Answer content</option>
-                        </select>
-                      </label>
-                      <label className="grid gap-1 text-xs font-medium">
-                        Placement
-                        <select
-                          className="h-8 rounded-sm border bg-background px-2 text-sm"
-                          value={currentVisualOption.placement}
-                          disabled={busy}
-                          onChange={(event) =>
-                            updateVisualOption(question.id, { placement: event.target.value as ExamAssetPlacement })
-                          }
-                        >
-                          <option value="before_content">Before content</option>
-                          <option value="after_content">After content</option>
-                          <option value="inline">Inline marker</option>
-                        </select>
-                      </label>
+                  <div className="rounded-md border border-dashed border-border bg-muted/10 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium">Visual asset</p>
+                        <p className="text-xs text-muted-foreground">Attach a custom upload or source-PDF crop to the question or answer.</p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={isVisualPanelOpen ? "secondary" : "outline"}
+                        onClick={() => setVisualPanelQuestionId(isVisualPanelOpen ? null : question.id)}
+                      >
+                        <IconPhotoPlus className="size-3.5" />
+                        {isVisualPanelOpen ? "Close visual tools" : "Add visual"}
+                      </Button>
                     </div>
-                    <ExamAssetUploader
-                      examId={examId}
-                      role={currentVisualOption.role}
-                      label="Upload visual"
-                      onUploaded={(uploaded) => addAssets(index, uploaded, currentVisualOption.placement)}
-                    />
-                    <details>
-                      <summary className="cursor-pointer text-sm font-medium">Crop from source PDF</summary>
-                      <div className="mt-3">
-                        <PdfCropTool
+                    {isVisualPanelOpen ? (
+                      <div className="mt-3 grid gap-3 border-t border-border pt-3">
+                        <div className="grid gap-2 sm:grid-cols-[180px_180px]">
+                          <label className="grid gap-1 text-xs font-medium">
+                            Attach to
+                            <select
+                              className="h-8 rounded-sm border bg-background px-2 text-sm"
+                              value={currentVisualOption.role}
+                              disabled={busy}
+                              onChange={(event) =>
+                                updateVisualOption(question.id, { role: event.target.value as VisualUploadOptions["role"] })
+                              }
+                            >
+                              <option value="question_visual">Question content</option>
+                              <option value="answer_visual">Answer content</option>
+                            </select>
+                          </label>
+                          <label className="grid gap-1 text-xs font-medium">
+                            Placement
+                            <select
+                              className="h-8 rounded-sm border bg-background px-2 text-sm"
+                              value={currentVisualOption.placement}
+                              disabled={busy}
+                              onChange={(event) =>
+                                updateVisualOption(question.id, { placement: event.target.value as ExamAssetPlacement })
+                              }
+                            >
+                              <option value="before_content">Before content</option>
+                              <option value="after_content">After content</option>
+                              <option value="inline">Inline marker</option>
+                            </select>
+                          </label>
+                        </div>
+                        <ExamAssetUploader
                           examId={examId}
                           role={currentVisualOption.role}
-                          onRoleChange={(role) => updateVisualOption(question.id, { role })}
-                          showRoleSelect={false}
-                          onUploaded={(asset) => addAssets(index, [asset], currentVisualOption.placement)}
+                          label="Upload visual"
+                          surface={false}
+                          onUploaded={(uploaded) => addAssets(index, uploaded, currentVisualOption.placement)}
                         />
+                        {hasSourcePdf ? (
+                          <details>
+                            <summary className="cursor-pointer text-sm font-medium">Crop from source PDF</summary>
+                            <div className="mt-3">
+                              <PdfCropTool
+                                examId={examId}
+                                role={currentVisualOption.role}
+                                onRoleChange={(role) => updateVisualOption(question.id, { role })}
+                                showRoleSelect={false}
+                                onUploaded={(asset) => addAssets(index, [asset], currentVisualOption.placement)}
+                              />
+                            </div>
+                          </details>
+                        ) : null}
                       </div>
-                    </details>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -582,16 +733,21 @@ export function ExamReviewEditor({
                 ) : null}
 
                 <div className="grid gap-2 rounded-md border border-border bg-muted/20 p-3">
-                  <label className="flex items-center gap-2 text-sm font-medium">
-                    <input
-                      type="checkbox"
-                      className="accent-primary"
-                      checked={question.requiresVisual}
-                      disabled={published}
-                      onChange={(event) => update(index, "requiresVisual", event.target.checked)}
-                    />
-                    This question requires a graph, diagram, table or other visual
-                  </label>
+                  <div className="grid gap-1">
+                    <label className="flex items-center gap-2 text-sm font-medium">
+                      <input
+                        type="checkbox"
+                        className="accent-primary"
+                        checked={question.requiresVisual}
+                        disabled={published}
+                        onChange={(event) => update(index, "requiresVisual", event.target.checked)}
+                      />
+                      Needs separate visual asset before publishing
+                    </label>
+                    <p className="pl-6 text-xs text-muted-foreground">
+                      Use when the question text is incomplete without a graph, diagram, table or image.
+                    </p>
+                  </div>
                   {question.requiresVisual ? (
                     <label className="flex items-center gap-2 text-sm">
                       <input
@@ -601,7 +757,7 @@ export function ExamReviewEditor({
                         disabled={published}
                         onChange={(event) => update(index, "visualNotNeeded", event.target.checked)}
                       />
-                      Teacher confirmed that a separate visual asset is unnecessary
+                      Reviewed: no separate visual asset is needed
                     </label>
                   ) : null}
                 </div>
@@ -618,6 +774,7 @@ export function ExamReviewEditor({
                 </label>
 
               </div>
+              ) : null}
             </section>
             );
           })}
@@ -625,7 +782,7 @@ export function ExamReviewEditor({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setItems((current) => [...current, newQuestion(intakeMode, current.length + 1)])}
+              onClick={addQuestion}
             >
               <IconPlus className="size-4" />
               Add question
@@ -644,6 +801,25 @@ export function ExamReviewEditor({
           </ProtectedExamViewer>
         </section>
       )}
+
+      <Dialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete question {pendingDelete?.label}?</DialogTitle>
+            <DialogDescription>
+              This removes the draft question and its attached images from the editor. Save the draft to persist the deletion.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPendingDelete(null)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={deletePendingQuestion}>
+              Delete question
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {!published ? (
         <div className="sticky bottom-3 flex flex-wrap justify-end gap-2 rounded-lg border border-border bg-card/95 p-3 shadow-lg backdrop-blur">
