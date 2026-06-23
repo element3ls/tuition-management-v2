@@ -20,11 +20,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ exam
     return NextResponse.json({ error: "Exam questions cannot be edited in the current state." }, { status: 409 });
   }
 
-  const { data: htmlImages } = await supabase
+  const { data: readyDisplayAssets } = await supabase
     .from("exam_assets")
     .select("*")
     .eq("exam_id", examId)
-    .eq("role", "html_image")
     .eq("variant", "display")
     .eq("upload_status", "ready");
 
@@ -35,8 +34,24 @@ export async function PUT(request: Request, { params }: { params: Promise<{ exam
       question_number: question.questionNumber,
       question_text: question.questionText,
       answer_text: question.answerText,
-      question_html: question.questionHtml ? sanitizeExamHtml(question.questionHtml, examId, htmlImages ?? []) : null,
-      answer_html: question.answerHtml ? sanitizeExamHtml(question.answerHtml, examId, htmlImages ?? []) : null,
+      question_html: question.questionHtml
+        ? sanitizeExamHtml(
+            question.questionHtml,
+            examId,
+            (readyDisplayAssets ?? []).filter(
+              (asset) => asset.role === "html_image" || question.assets.some((item) => item.id === asset.id)
+            )
+          )
+        : null,
+      answer_html: question.answerHtml
+        ? sanitizeExamHtml(
+            question.answerHtml,
+            examId,
+            (readyDisplayAssets ?? []).filter(
+              (asset) => asset.role === "html_image" || question.assets.some((item) => item.id === asset.id)
+            )
+          )
+        : null,
       question_format: question.questionFormat,
       answer_format: question.answerFormat,
       marks: question.marks,
@@ -49,6 +64,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ exam
         id: asset.id,
         role: asset.role,
         sort_order: asset.sortOrder,
+        placement: asset.placement,
         alt_text: asset.altText
       }))
     }));

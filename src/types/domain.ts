@@ -23,6 +23,7 @@ export type ExamStatus = "draft" | "review" | "published" | "archived";
 export type ExamProcessingStatus = "idle" | "processing" | "completed" | "failed";
 export type ExamIntakeMode = "ai_solved" | "teacher_html" | "handwritten_images";
 export type ExamContentFormat = "markdown" | "html" | "image";
+export type ExamAssetPlacement = "before_content" | "after_content" | "inline";
 export type ExamAssetRole =
   | "source_pdf"
   | "answer_html"
@@ -261,6 +262,7 @@ export type ExamAsset = {
   size_bytes: number;
   upload_status: "pending" | "ready" | "failed";
   sort_order: number;
+  placement: ExamAssetPlacement;
   source_page: number | null;
   crop_x: number | null;
   crop_y: number | null;

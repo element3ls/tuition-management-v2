@@ -71,6 +71,7 @@ export default async function StudentExamPage({ params }: { params: Promise<{ ex
                 id: asset.id,
                 role: asset.role as "question_image" | "answer_image" | "question_visual" | "answer_visual",
                 sortOrder: asset.sort_order,
+                placement: asset.placement,
                 altText: asset.alt_text
               }))
           }))}

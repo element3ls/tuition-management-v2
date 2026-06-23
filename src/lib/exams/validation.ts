@@ -9,6 +9,7 @@ export const maxExamImageCount = 100;
 export const maxExamCombinedAssetBytes = 150 * 1024 * 1024;
 
 export const examIntakeModeSchema = z.enum(["ai_solved", "teacher_html", "handwritten_images"]);
+export const examAssetPlacementSchema = z.enum(["before_content", "after_content", "inline"]);
 export const examAssetRoleSchema = z.enum([
   "source_pdf",
   "answer_html",
@@ -121,6 +122,7 @@ export const examQuestionAssetInputSchema = z.object({
   id: z.string().uuid(),
   role: z.enum(["question_image", "answer_image", "question_visual", "answer_visual"]),
   sortOrder: z.number().int().min(0),
+  placement: examAssetPlacementSchema.default("after_content"),
   altText: z.string().trim().max(500).nullable()
 });
 

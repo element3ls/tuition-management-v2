@@ -16,6 +16,7 @@ const imageAsset: ExamAsset = {
   size_bytes: 100,
   upload_status: "ready",
   sort_order: 0,
+  placement: "after_content",
   source_page: null,
   crop_x: null,
   crop_y: null,
@@ -29,6 +30,17 @@ const imageAsset: ExamAsset = {
   uploaded_by: null,
   created_at: "2026-06-10T00:00:00.000Z",
   updated_at: "2026-06-10T00:00:00.000Z"
+};
+
+const inlineAsset: ExamAsset = {
+  ...imageAsset,
+  id: "74000000-0000-4000-8000-000000000003",
+  role: "answer_visual",
+  original_asset_id: "74000000-0000-4000-8000-000000000004",
+  file_name: "diagram.png",
+  alt_text: "Diagram",
+  placement: "inline",
+  student_visible: false
 };
 
 describe("teacher HTML answers", () => {
@@ -82,5 +94,22 @@ describe("teacher HTML answers", () => {
     expect(html).not.toContain("onclick");
     expect(html).not.toContain("<a");
     expect(html).toContain(protectedUrl);
+  });
+
+  it("preserves attached inline visual placeholders and rejects unattached ones", () => {
+    const html = sanitizeExamHtml(
+      `<p>Use the diagram.</p><div data-exam-asset-id="${inlineAsset.id}">ignored</div>`,
+      imageAsset.exam_id,
+      [imageAsset, inlineAsset]
+    );
+
+    expect(html).toContain(`data-exam-asset-id="${inlineAsset.id}"`);
+    expect(html).not.toContain("ignored");
+    expect(() =>
+      sanitizeExamHtml('<div data-exam-asset-id="74000000-0000-4000-8000-000000000099"></div>', imageAsset.exam_id, [
+        imageAsset,
+        inlineAsset
+      ])
+    ).toThrow(/not attached/);
   });
 });

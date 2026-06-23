@@ -34,8 +34,7 @@ describe("exam intake validation", () => {
 
   it("sanitizes storage names and validates reviewed questions", () => {
     expect(safeExamFileName("../SPM Paper 1")).toBe("spm-paper-1");
-    expect(
-      examQuestionsInputSchema.safeParse({
+    const reviewedQuestions = examQuestionsInputSchema.safeParse({
         questions: [
           {
             id: "73000000-0000-4000-8000-000000000001",
@@ -55,8 +54,11 @@ describe("exam intake validation", () => {
             sortOrder: 1
           }
         ]
-      }).success
-    ).toBe(true);
+      });
+    expect(reviewedQuestions.success).toBe(true);
+    if (reviewedQuestions.success) {
+      expect(reviewedQuestions.data.questions[0].assets).toEqual([]);
+    }
   });
 
   it("enforces the three intake-mode file contracts", () => {
@@ -149,5 +151,41 @@ describe("exam intake validation", () => {
         ]
       }).success
     ).toBe(false);
+  });
+
+  it("defaults reviewed asset placement to after content", () => {
+    const result = examQuestionsInputSchema.safeParse({
+      questions: [
+        {
+          id: "73000000-0000-4000-8000-000000000001",
+          questionNumber: "1",
+          questionText: "Use the diagram.",
+          answerText: "Answer.",
+          questionHtml: null,
+          answerHtml: null,
+          questionFormat: "markdown",
+          answerFormat: "markdown",
+          marks: 1,
+          sourcePages: [1],
+          reviewWarning: null,
+          requiresVisual: true,
+          visualNotNeeded: false,
+          sortOrder: 1,
+          assets: [
+            {
+              id: "74000000-0000-4000-8000-000000000001",
+              role: "question_visual",
+              sortOrder: 0,
+              altText: null
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.questions[0].assets[0].placement).toBe("after_content");
+    }
   });
 });

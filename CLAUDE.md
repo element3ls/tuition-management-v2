@@ -83,7 +83,7 @@ This is the most complex subsystem — see `documentation.md` ("Exam Intake And 
 
 Key pieces:
 - `src/lib/exams/signed-upload.ts`, `validation.ts` — generic signed uploads to the private `exam-assets` bucket (legacy PDFs may live in `exam-sources`), file-type/size limits.
-- `src/lib/exams/images.ts`, `client-assets.ts` — image normalization to stripped WebP (max 2400px, quality 88); staff-only originals retained.
+- `src/lib/exams/images.ts`, `client-assets.ts` — image normalization to stripped WebP (max 2400px, quality 88); staff-only originals retained. PDF-mode visuals can be cropped from the source PDF or uploaded as custom images, then placed before content, after content, or inline.
 - `src/lib/exams/html.ts` — teacher-HTML sanitization/validation rules.
 - `src/lib/exams/ai.ts` — OpenAI transcription/answering; `src/app/api/webhooks/openai` and status polling share one idempotent DB finalizer (`exam_processing_runs` tracks every attempt).
 - Exam lifecycle: `draft` -> `review` -> `published` -> `archived` (separate from processing status `idle`/`processing`/`completed`/`failed`). Processing completion, publication, and reviewed-question updates use DB transactions. Published exams are immutable.

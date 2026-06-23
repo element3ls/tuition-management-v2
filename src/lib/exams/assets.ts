@@ -103,6 +103,7 @@ export async function prepareExamAssetUpload(input: PrepareExamAssetInput) {
     crop_width: input.crop?.width ?? null,
     crop_height: input.crop?.height ?? null,
     rotation: input.rotation ?? 0,
+    placement: "after_content",
     alt_text: input.altText ?? null,
     student_visible: false,
     uploaded_by: input.actorId
@@ -197,6 +198,7 @@ export async function completeExamAssetUpload(examId: string, assetId: string, a
       width: normalized.width,
       height: normalized.height,
       rotation: 0,
+      placement: asset.placement ?? "after_content",
       alt_text: asset.alt_text,
       student_visible: asset.role === "html_image",
       uploaded_by: actorId

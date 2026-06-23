@@ -184,7 +184,7 @@ Choose one intake mode:
 
 All uploads use generic signed uploads to the private `exam-assets` bucket. Legacy PDF files may remain in `exam-sources`. Image uploads are retained as staff-only originals and normalized to stripped WebP display assets (maximum 2400 px, quality 88).
 
-For PDF modes, open the exam after upload and start background processing. OpenAI webhook completion and status polling share one idempotent database finalizer. Reviewers can add, delete and reorder questions, edit mode-specific content, clear warnings, and crop graphs or diagrams from the source PDF with the PDF.js crop tool.
+For PDF modes, open the exam after upload and start background processing. OpenAI webhook completion and status polling share one idempotent database finalizer. Reviewers can add, delete and reorder questions, edit mode-specific content, clear warnings, upload custom visuals, and crop graphs or diagrams from the source PDF with the PDF.js crop tool. Question and answer visuals can be placed before content, after content, or inline through editor-inserted visual markers.
 
 Teacher HTML must contain exactly one `<section data-question-number="...">` per transcribed question. Local images use `assets/filename.png`; external, data, and blob URLs are rejected. Use `<span data-math>...</span>` or `<div data-math-display>...</div>` for KaTeX math.
 

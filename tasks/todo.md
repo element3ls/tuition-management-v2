@@ -13,7 +13,7 @@
 ## Review Notes
 
 - Source PDFs, raw HTML, and original image uploads remain staff-only.
-- PDF graphs are manually cropped; handwritten visuals remain in their original image groups.
+- PDF visuals can be cropped or uploaded as custom images, then placed before content, after content, or inline with editor markers. Handwritten visuals remain in their original image groups.
 - Publication is approved for the entire exam and published exams are immutable.
 - Uploaders may approve their own exams under existing role rules.
 - Browser controls are deterrence, not guaranteed DRM.

@@ -41,11 +41,14 @@ export type ImportedHtmlAnswer = {
 };
 
 export function sanitizeExamHtml(value: string, examId: string, imageAssets: ExamAsset[] = []) {
-  const readyAssets = imageAssets.filter(
-    (asset) => asset.role === "html_image" && asset.variant === "display" && asset.upload_status === "ready"
+  const readyAssets = imageAssets.filter((asset) => asset.variant === "display" && asset.upload_status === "ready");
+  const htmlAssets = readyAssets.filter((asset) => asset.role === "html_image");
+  const inlineAssets = readyAssets.filter((asset) =>
+    ["question_image", "answer_image", "question_visual", "answer_visual"].includes(asset.role)
   );
-  const assetsByName = new Map(readyAssets.map((asset) => [asset.file_name.toLowerCase(), asset]));
-  const assetsById = new Map(readyAssets.map((asset) => [asset.id, asset]));
+  const assetsByName = new Map(htmlAssets.map((asset) => [asset.file_name.toLowerCase(), asset]));
+  const assetsById = new Map(htmlAssets.map((asset) => [asset.id, asset]));
+  const inlineAssetsById = new Map(inlineAssets.map((asset) => [asset.id, asset]));
   const $ = cheerio.load(value, null, false);
 
   $("[data-math]").each((_index, element) => {
@@ -55,6 +58,14 @@ export function sanitizeExamHtml(value: string, examId: string, imageAssets: Exa
   $("[data-math-display]").each((_index, element) => {
     const math = ($(element).attr("data-math-display")?.trim() || $(element).text().trim());
     $(element).attr("data-math-display", math);
+  });
+  $("[data-exam-asset-id]").each((_index, element) => {
+    const assetId = ($(element).attr("data-exam-asset-id") ?? "").trim();
+    if (!inlineAssetsById.has(assetId)) {
+      throw new Error(`Inline visual "${assetId || "(empty)"}" is not attached to this question.`);
+    }
+    $(element).attr("data-exam-asset-id", assetId);
+    $(element).empty();
   });
   $("img").each((_index, element) => {
     const source = ($(element).attr("src") ?? "").trim();
@@ -75,8 +86,8 @@ export function sanitizeExamHtml(value: string, examId: string, imageAssets: Exa
     allowedTags,
     allowedAttributes: {
       img: ["src", "alt", "width", "height"],
-      span: ["data-math"],
-      div: ["data-math-display"],
+      span: ["data-math", "data-exam-asset-id"],
+      div: ["data-math-display", "data-exam-asset-id"],
       th: ["colspan", "rowspan"],
       td: ["colspan", "rowspan"]
     },

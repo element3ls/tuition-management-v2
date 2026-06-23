@@ -271,6 +271,7 @@ export const demoData: AppData = {
       size_bytes: 32768,
       upload_status: "ready",
       sort_order: 0,
+      placement: "after_content",
       source_page: null,
       crop_x: null,
       crop_y: null,

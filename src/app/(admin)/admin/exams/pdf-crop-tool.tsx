@@ -24,20 +24,31 @@ function selectionFrom(start: Point, end: Point): Selection {
 
 export function PdfCropTool({
   examId,
+  role: controlledRole,
+  onRoleChange,
+  showRoleSelect = true,
   onUploaded
 }: {
   examId: string;
+  role?: "question_visual" | "answer_visual";
+  onRoleChange?: (role: "question_visual" | "answer_visual") => void;
+  showRoleSelect?: boolean;
   onUploaded: (asset: ExamAsset) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
-  const [role, setRole] = useState<"question_visual" | "answer_visual">("question_visual");
+  const [internalRole, setInternalRole] = useState<"question_visual" | "answer_visual">("question_visual");
   const [selection, setSelection] = useState<Selection | null>(null);
   const [start, setStart] = useState<Point | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const role = controlledRole ?? internalRole;
+  const setRole = (nextRole: "question_visual" | "answer_visual") => {
+    if (!controlledRole) setInternalRole(nextRole);
+    onRoleChange?.(nextRole);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -167,13 +178,15 @@ export function PdfCropTool({
             className="w-24"
           />
         </label>
-        <label className="grid gap-1 text-xs font-medium">
-          Attach as
-          <Select value={role} disabled={busy} onChange={(event) => setRole(event.target.value as typeof role)}>
-            <option value="question_visual">Question visual</option>
-            <option value="answer_visual">Answer visual</option>
-          </Select>
-        </label>
+        {showRoleSelect ? (
+          <label className="grid gap-1 text-xs font-medium">
+            Attach as
+            <Select value={role} disabled={busy} onChange={(event) => setRole(event.target.value as typeof role)}>
+              <option value="question_visual">Question visual</option>
+              <option value="answer_visual">Answer visual</option>
+            </Select>
+          </label>
+        ) : null}
         <Button type="button" onClick={() => void save()} disabled={busy || !selection || selection.width < 8 || selection.height < 8}>
           {busy ? <LoaderCircle className="animate-spin" /> : <Crop />}
           Save crop

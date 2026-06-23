@@ -13,13 +13,19 @@ import { MarkdownLatexEditor } from "@/components/content/markdown-latex-editor"
 import { ProtectedExamViewer } from "@/components/content/protected-exam-viewer";
 import { ExamAssetUploader } from "@/app/(admin)/admin/exams/exam-asset-uploader";
 import { PdfCropTool } from "@/app/(admin)/admin/exams/pdf-crop-tool";
-import type { ExamAsset, ExamAssetRole, ExamIntakeMode, ExamQuestion } from "@/types/domain";
+import type { ExamAsset, ExamAssetPlacement, ExamAssetRole, ExamIntakeMode, ExamQuestion } from "@/types/domain";
 
 type EditableAsset = {
   id: string;
   role: Extract<ExamAssetRole, "question_image" | "answer_image" | "question_visual" | "answer_visual">;
   sortOrder: number;
+  placement: ExamAssetPlacement;
   altText: string | null;
+};
+
+type VisualUploadOptions = {
+  role: Extract<ExamAssetRole, "question_visual" | "answer_visual">;
+  placement: ExamAssetPlacement;
 };
 
 type EditableQuestion = {
@@ -72,6 +78,7 @@ function toEditable(question: ExamQuestion, assets: ExamAsset[]): EditableQuesti
         id: asset.id,
         role: asset.role,
         sortOrder: asset.sort_order,
+        placement: asset.placement ?? "after_content",
         altText: asset.alt_text
       }))
   };
@@ -104,6 +111,57 @@ function previewQuestion(question: EditableQuestion) {
   };
 }
 
+function markdownInlineMarker(assetId: string) {
+  return `{{exam_asset:${assetId}}}`;
+}
+
+function htmlInlineMarker(assetId: string) {
+  return `<div data-exam-asset-id="${assetId}"></div>`;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasInlineMarker(question: EditableQuestion, assetId: string) {
+  return (
+    (question.questionText?.includes(markdownInlineMarker(assetId)) ?? false) ||
+    (question.answerText?.includes(markdownInlineMarker(assetId)) ?? false) ||
+    (question.questionHtml?.includes(`data-exam-asset-id="${assetId}"`) ?? false) ||
+    (question.answerHtml?.includes(`data-exam-asset-id="${assetId}"`) ?? false)
+  );
+}
+
+function withoutInlineMarker(question: EditableQuestion, assetId: string) {
+  const markdownMarker = markdownInlineMarker(assetId);
+  const htmlMarkerPattern = new RegExp(
+    `<(?:div|span)\\b[^>]*data-exam-asset-id=["']${escapeRegExp(assetId)}["'][^>]*>\\s*</(?:div|span)>`,
+    "g"
+  );
+
+  return {
+    ...question,
+    questionText: question.questionText?.replaceAll(markdownMarker, "") ?? null,
+    answerText: question.answerText?.replaceAll(markdownMarker, "") ?? null,
+    questionHtml: question.questionHtml?.replace(htmlMarkerPattern, "") ?? null,
+    answerHtml: question.answerHtml?.replace(htmlMarkerPattern, "") ?? null
+  };
+}
+
+function withInlineMarker(question: EditableQuestion, asset: EditableAsset) {
+  if (asset.placement !== "inline" || hasInlineMarker(question, asset.id)) return question;
+  if (asset.role === "question_visual" && question.questionFormat === "markdown") {
+    return { ...question, questionText: `${question.questionText ?? ""}\n\n${markdownInlineMarker(asset.id)}\n` };
+  }
+  if (asset.role === "answer_visual" && question.answerFormat === "markdown") {
+    return { ...question, answerText: `${question.answerText ?? ""}\n\n${markdownInlineMarker(asset.id)}\n` };
+  }
+  if (asset.role === "answer_visual" && question.answerFormat === "html") {
+    return { ...question, answerHtml: `${question.answerHtml ?? ""}\n${htmlInlineMarker(asset.id)}\n` };
+  }
+  return question;
+}
+
 export function ExamReviewEditor({
   examId,
   intakeMode,
@@ -127,9 +185,20 @@ export function ExamReviewEditor({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [visualOptions, setVisualOptions] = useState<Record<string, VisualUploadOptions>>({});
 
   const normalizeOrder = (questionsToOrder: EditableQuestion[]) =>
     questionsToOrder.map((question, index) => ({ ...question, sortOrder: index + 1 }));
+
+  const visualOptionFor = (questionId: string): VisualUploadOptions =>
+    visualOptions[questionId] ?? { role: "question_visual", placement: "after_content" };
+
+  const updateVisualOption = (questionId: string, patch: Partial<VisualUploadOptions>) => {
+    setVisualOptions((current) => ({
+      ...current,
+      [questionId]: { ...(current[questionId] ?? { role: "question_visual", placement: "after_content" }), ...patch }
+    }));
+  };
 
   const update = <K extends keyof EditableQuestion>(index: number, key: K, value: EditableQuestion[K]) => {
     setItems((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: value } : item)));
@@ -145,39 +214,57 @@ export function ExamReviewEditor({
     });
   };
 
-  const addAssets = (questionIndex: number, uploaded: ExamAsset[]) => {
+  const addAssets = (questionIndex: number, uploaded: ExamAsset[], placement: ExamAssetPlacement = "after_content") => {
     setItems((current) =>
-      current.map((question, index) =>
-        index === questionIndex
-          ? {
-              ...question,
-              assets: [
-                ...question.assets,
-                ...uploaded.map((asset, offset) => ({
-                  id: asset.id,
-                  role: asset.role as EditableAsset["role"],
-                  sortOrder: question.assets.length + offset,
-                  altText: asset.alt_text
-                }))
-              ]
-            }
-          : question
-      )
+      current.map((question, index) => {
+        if (index !== questionIndex) return question;
+        const nextAssets = [
+          ...question.assets,
+          ...uploaded.map((asset, offset) => ({
+            id: asset.id,
+            role: asset.role as EditableAsset["role"],
+            sortOrder: question.assets.length + offset,
+            placement,
+            altText: asset.alt_text
+          }))
+        ];
+        return nextAssets.reduce(withInlineMarker, { ...question, assets: nextAssets });
+      })
     );
   };
 
   const updateAsset = (questionIndex: number, assetIndex: number, patch: Partial<EditableAsset>) => {
     setItems((current) =>
-      current.map((question, index) =>
-        index === questionIndex
-          ? {
-              ...question,
-              assets: question.assets.map((asset, indexOfAsset) =>
-                indexOfAsset === assetIndex ? { ...asset, ...patch } : asset
-              )
-            }
-          : question
-      )
+      current.map((question, index) => {
+        if (index !== questionIndex) return question;
+        const previousAsset = question.assets[assetIndex];
+        const assets = question.assets.map((asset, indexOfAsset) =>
+          indexOfAsset === assetIndex ? { ...asset, ...patch } : asset
+        );
+        const updatedAsset = assets[assetIndex];
+        const changedInlineTarget =
+          previousAsset &&
+          previousAsset.placement === "inline" &&
+          updatedAsset &&
+          (updatedAsset.placement !== "inline" || updatedAsset.role !== previousAsset.role);
+        const nextQuestion = changedInlineTarget
+          ? withoutInlineMarker({ ...question, assets }, previousAsset.id)
+          : { ...question, assets };
+        return updatedAsset ? withInlineMarker(nextQuestion, updatedAsset) : nextQuestion;
+      })
+    );
+  };
+
+  const removeAsset = (questionIndex: number, assetIndex: number) => {
+    setItems((current) =>
+      current.map((question, index) => {
+        if (index !== questionIndex) return question;
+        const removed = question.assets[assetIndex];
+        const assets = question.assets
+          .filter((_, indexOfAsset) => indexOfAsset !== assetIndex)
+          .map((item, order) => ({ ...item, sortOrder: order }));
+        return removed ? withoutInlineMarker({ ...question, assets }, removed.id) : { ...question, assets };
+      })
     );
   };
 
@@ -236,7 +323,10 @@ export function ExamReviewEditor({
 
       {view === "edit" ? (
         <>
-          {items.map((question, index) => (
+          {items.map((question, index) => {
+            const currentVisualOption = visualOptionFor(question.id);
+
+            return (
             <section key={question.id} className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-2.5">
                 <h3 className="text-sm font-semibold">Question {question.questionNumber || index + 1}</h3>
@@ -356,11 +446,65 @@ export function ExamReviewEditor({
                   </div>
                 ) : null}
 
+                {!published && intakeMode !== "handwritten_images" ? (
+                  <div className="grid gap-3 rounded-md border border-border bg-muted/20 p-3">
+                    <div className="grid gap-2 sm:grid-cols-[180px_180px]">
+                      <label className="grid gap-1 text-xs font-medium">
+                        Attach to
+                        <select
+                          className="h-8 rounded-sm border bg-background px-2 text-sm"
+                          value={currentVisualOption.role}
+                          disabled={busy}
+                          onChange={(event) =>
+                            updateVisualOption(question.id, { role: event.target.value as VisualUploadOptions["role"] })
+                          }
+                        >
+                          <option value="question_visual">Question content</option>
+                          <option value="answer_visual">Answer content</option>
+                        </select>
+                      </label>
+                      <label className="grid gap-1 text-xs font-medium">
+                        Placement
+                        <select
+                          className="h-8 rounded-sm border bg-background px-2 text-sm"
+                          value={currentVisualOption.placement}
+                          disabled={busy}
+                          onChange={(event) =>
+                            updateVisualOption(question.id, { placement: event.target.value as ExamAssetPlacement })
+                          }
+                        >
+                          <option value="before_content">Before content</option>
+                          <option value="after_content">After content</option>
+                          <option value="inline">Inline marker</option>
+                        </select>
+                      </label>
+                    </div>
+                    <ExamAssetUploader
+                      examId={examId}
+                      role={currentVisualOption.role}
+                      label="Upload visual"
+                      onUploaded={(uploaded) => addAssets(index, uploaded, currentVisualOption.placement)}
+                    />
+                    <details>
+                      <summary className="cursor-pointer text-sm font-medium">Crop from source PDF</summary>
+                      <div className="mt-3">
+                        <PdfCropTool
+                          examId={examId}
+                          role={currentVisualOption.role}
+                          onRoleChange={(role) => updateVisualOption(question.id, { role })}
+                          showRoleSelect={false}
+                          onUploaded={(asset) => addAssets(index, [asset], currentVisualOption.placement)}
+                        />
+                      </div>
+                    </details>
+                  </div>
+                ) : null}
+
                 {question.assets.length > 0 ? (
                   <div className="grid gap-2">
                     <p className="text-sm font-medium">Attached images and visuals</p>
                     {question.assets.map((asset, assetIndex) => (
-                      <div key={asset.id} className="grid gap-2 rounded-md border p-2 sm:grid-cols-[100px_150px_1fr_auto]">
+                      <div key={asset.id} className="grid gap-2 rounded-md border p-2 sm:grid-cols-[100px_150px_150px_1fr_auto]">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={`/api/exams/${examId}/assets/${asset.id}`}
@@ -384,6 +528,16 @@ export function ExamReviewEditor({
                               <option value="answer_visual">Answer visual</option>
                             </>
                           )}
+                        </select>
+                        <select
+                          className="rounded-sm border bg-background px-2 text-sm"
+                          value={asset.placement}
+                          disabled={published}
+                          onChange={(event) => updateAsset(index, assetIndex, { placement: event.target.value as ExamAssetPlacement })}
+                        >
+                          <option value="before_content">Before content</option>
+                          <option value="after_content">After content</option>
+                          {intakeMode !== "handwritten_images" ? <option value="inline">Inline marker</option> : null}
                         </select>
                         <Input
                           value={asset.altText ?? ""}
@@ -416,15 +570,7 @@ export function ExamReviewEditor({
                               size="icon-sm"
                               variant="ghost"
                               aria-label={`Remove ${asset.altText ?? asset.role}`}
-                              onClick={() =>
-                                update(
-                                  index,
-                                  "assets",
-                                  question.assets
-                                    .filter((_, indexOfAsset) => indexOfAsset !== assetIndex)
-                                    .map((item, order) => ({ ...item, sortOrder: order }))
-                                )
-                              }
+                              onClick={() => removeAsset(index, assetIndex)}
                             >
                               <IconX className="size-3.5" />
                             </Button>
@@ -471,17 +617,10 @@ export function ExamReviewEditor({
                   />
                 </label>
 
-                {!published && intakeMode !== "handwritten_images" ? (
-                  <details>
-                    <summary className="cursor-pointer text-sm font-medium">Crop a graph or diagram from the source PDF</summary>
-                    <div className="mt-3">
-                      <PdfCropTool examId={examId} onUploaded={(asset) => addAssets(index, [asset])} />
-                    </div>
-                  </details>
-                ) : null}
               </div>
             </section>
-          ))}
+            );
+          })}
           {!published ? (
             <Button
               type="button"
