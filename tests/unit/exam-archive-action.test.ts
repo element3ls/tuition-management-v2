@@ -42,7 +42,7 @@ vi.mock("@/lib/audit/log", () => ({
   logAudit: mocks.logAudit
 }));
 
-const { archiveExamAction, unarchiveExamAction } = await import("@/features/admin/actions");
+const { archiveExamAction, unarchiveExamAction, unpublishExamAction } = await import("@/features/admin/actions");
 
 function formDataForExam() {
   const formData = new FormData();
@@ -170,5 +170,53 @@ describe("unarchiveExamAction", () => {
     await expect(unarchiveExamAction(formDataForExam())).rejects.toThrow("redirect:/admin/exams?success=Exam%20unarchived");
 
     expect(table.update).toHaveBeenCalledWith({ status: "review" });
+  });
+});
+
+describe("unpublishExamAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.requireAdminAccess.mockResolvedValue({ user: { id: demoIds.admin }, roles: ["admin"] });
+    mocks.isDemoMode.mockReturnValue(false);
+    mocks.isSupabaseConfigured.mockReturnValue(true);
+  });
+
+  it("returns a published exam to review and records an audit event", async () => {
+    const exam = {
+      id: demoIds.exam,
+      title: "Linear Equations Practice Exam",
+      status: "published",
+      processing_status: "completed",
+      published_at: "2026-06-24T08:00:00.000Z"
+    };
+    const table = mockAdminTables(exam);
+
+    await expect(unpublishExamAction(formDataForExam())).rejects.toThrow("redirect:/admin/exams?success=Exam%20unpublished");
+
+    expect(table.update).toHaveBeenCalledWith({ status: "review" });
+    expect(table.eqAfterUpdate).toHaveBeenCalledWith("id", demoIds.exam);
+    expect(mocks.logAudit).toHaveBeenCalledWith({
+      actorId: demoIds.admin,
+      action: "exam_unpublished",
+      resourceType: "exam",
+      resourceId: demoIds.exam,
+      beforeData: exam,
+      afterData: { status: "review" }
+    });
+  });
+
+  it("does not change an exam that is already unpublished", async () => {
+    const table = mockAdminTables({
+      id: demoIds.exam,
+      status: "review",
+      processing_status: "completed"
+    });
+
+    await expect(unpublishExamAction(formDataForExam())).rejects.toThrow(
+      "redirect:/admin/exams?success=Exam%20is%20already%20unpublished"
+    );
+
+    expect(table.update).not.toHaveBeenCalled();
+    expect(mocks.logAudit).not.toHaveBeenCalled();
   });
 });

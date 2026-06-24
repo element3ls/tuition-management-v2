@@ -971,6 +971,41 @@ export async function unarchiveExamAction(formData: FormData) {
   redirect("/admin/exams?success=Exam%20unarchived");
 }
 
+export async function unpublishExamAction(formData: FormData) {
+  const { user } = await requireAdminAccess();
+  const examId = z.string().uuid().parse(textValue(formData, "exam_id"));
+
+  if (isDemoMode()) await demoRedirect("/admin/exams");
+  ensureSupabaseReady();
+
+  const supabase = createAdminClient();
+  const { data: beforeData, error: fetchError } = await supabase.from("exams").select("*").eq("id", examId).single();
+  if (fetchError || !beforeData) {
+    redirect("/admin/exams?error=Exam%20not%20found");
+  }
+
+  if (beforeData.status !== "published") {
+    redirect("/admin/exams?success=Exam%20is%20already%20unpublished");
+  }
+
+  const payload = { status: "review" };
+  const { error } = await supabase.from("exams").update(payload).eq("id", examId);
+  if (error) throw new Error(error.message);
+
+  await logAudit({
+    actorId: user.id,
+    action: "exam_unpublished",
+    resourceType: "exam",
+    resourceId: examId,
+    beforeData,
+    afterData: payload
+  });
+
+  revalidatePath("/admin/exams");
+  revalidatePath(`/admin/exams/${examId}`);
+  redirect("/admin/exams?success=Exam%20unpublished");
+}
+
 export async function createTagAction(formData: FormData) {
   const { user } = await requireAdminAccess();
   const name = textValue(formData, "name");

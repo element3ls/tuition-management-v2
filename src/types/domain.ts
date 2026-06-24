@@ -67,7 +67,8 @@ export type AuditAction =
   | "exam_updated"
   | "exam_published"
   | "exam_archived"
-  | "exam_unarchived";
+  | "exam_unarchived"
+  | "exam_unpublished";
 
 export type Profile = {
   id: string;
