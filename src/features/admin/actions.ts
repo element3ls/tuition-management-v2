@@ -18,6 +18,7 @@ import {
 import { createStudentAccount } from "@/features/admin/students";
 
 const statusSchema = z.enum(["draft", "published", "archived"]);
+const examRestoreStatusSchema = z.enum(["draft", "review", "published"]);
 const resourceTypeSchema = z.enum(["year", "subject", "chapter", "question", "recording", "solution_material", "exam"]);
 const membershipStatusSchema = z.enum(["active", "inactive"]);
 const transcriptSourceSchema = z.enum(["none", "manual", "youtube", "generated"]);
@@ -909,6 +910,65 @@ export async function archiveExamAction(formData: FormData) {
   revalidatePath("/admin/exams");
   revalidatePath(`/admin/exams/${examId}`);
   redirect("/admin/exams?success=Exam%20archived");
+}
+
+async function restoredExamStatus(
+  supabase: ReturnType<typeof createAdminClient>,
+  examId: string,
+  exam: { published_at?: string | null }
+) {
+  const { data: archiveLog } = await supabase
+    .from("audit_logs")
+    .select("before_data")
+    .eq("resource_type", "exam")
+    .eq("resource_id", examId)
+    .eq("action", "exam_archived")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const previousStatus = examRestoreStatusSchema.safeParse(
+    (archiveLog?.before_data as { status?: unknown } | null | undefined)?.status
+  );
+
+  if (previousStatus.success) return previousStatus.data;
+  return exam.published_at ? "published" : "review";
+}
+
+export async function unarchiveExamAction(formData: FormData) {
+  const { user } = await requireAdminAccess();
+  const examId = z.string().uuid().parse(textValue(formData, "exam_id"));
+
+  if (isDemoMode()) await demoRedirect("/admin/exams");
+  ensureSupabaseReady();
+
+  const supabase = createAdminClient();
+  const { data: beforeData, error: fetchError } = await supabase.from("exams").select("*").eq("id", examId).single();
+  if (fetchError || !beforeData) {
+    redirect("/admin/exams?error=Exam%20not%20found");
+  }
+
+  if (beforeData.status !== "archived") {
+    redirect("/admin/exams?success=Exam%20is%20already%20active");
+  }
+
+  const status = await restoredExamStatus(supabase, examId, beforeData);
+  const payload = { status };
+  const { error } = await supabase.from("exams").update(payload).eq("id", examId);
+  if (error) throw new Error(error.message);
+
+  await logAudit({
+    actorId: user.id,
+    action: "exam_unarchived",
+    resourceType: "exam",
+    resourceId: examId,
+    beforeData,
+    afterData: payload
+  });
+
+  revalidatePath("/admin/exams");
+  revalidatePath(`/admin/exams/${examId}`);
+  redirect("/admin/exams?success=Exam%20unarchived");
 }
 
 export async function createTagAction(formData: FormData) {

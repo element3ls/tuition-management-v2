@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { IconArchive } from "@tabler/icons-react";
+import { IconArchive, IconArchiveOff } from "@tabler/icons-react";
 import { AdminDialog, CreateButton, EmptyTable, StatusBadge } from "@/components/admin/admin-ui";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { archiveExamAction } from "@/features/admin/actions";
+import { archiveExamAction, unarchiveExamAction } from "@/features/admin/actions";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getAppData } from "@/server/data/app-data";
 import { ExamUploadForm } from "@/app/(admin)/admin/exams/exam-upload-form";
@@ -16,7 +16,29 @@ type ExamListItem = Awaited<ReturnType<typeof getAppData>>["exams"][number];
 
 function ArchiveExamDialog({ exam }: { exam: ExamListItem }) {
   if (exam.status === "archived") {
-    return <span className="text-xs text-muted-foreground">Archived</span>;
+    return (
+      <AdminDialog
+        title="Unarchive exam"
+        description="Restore this exam to its previous lifecycle state when possible."
+        trigger={
+          <Button type="button" variant="outline" size="sm">
+            <IconArchiveOff className="size-3.5" />
+            Unarchive
+          </Button>
+        }
+      >
+        <form action={unarchiveExamAction} className="grid gap-4" data-mutation-form>
+          <input name="exam_id" type="hidden" value={exam.id} />
+          <p className="rounded-md border border-border bg-muted/35 p-3 text-sm text-muted-foreground">
+            Unarchive <span className="font-semibold text-foreground">{exam.title}</span>? If it was published before
+            archiving, it will become visible to authorized students again.
+          </p>
+          <Button type="submit">
+            Unarchive exam
+          </Button>
+        </form>
+      </AdminDialog>
+    );
   }
 
   const isProcessing = exam.processing_status === "processing";

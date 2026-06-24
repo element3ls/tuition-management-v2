@@ -42,7 +42,7 @@ vi.mock("@/lib/audit/log", () => ({
   logAudit: mocks.logAudit
 }));
 
-const { archiveExamAction } = await import("@/features/admin/actions");
+const { archiveExamAction, unarchiveExamAction } = await import("@/features/admin/actions");
 
 function formDataForExam() {
   const formData = new FormData();
@@ -50,17 +50,29 @@ function formDataForExam() {
   return formData;
 }
 
-function mockExamTable(exam: Record<string, unknown>) {
-  const single = vi.fn().mockResolvedValue({ data: exam, error: null });
-  const eqAfterSelect = vi.fn(() => ({ single }));
-  const select = vi.fn(() => ({ eq: eqAfterSelect }));
+function mockAdminTables(exam: Record<string, unknown>, archiveLog: Record<string, unknown> | null = null) {
+  const examSingle = vi.fn().mockResolvedValue({ data: exam, error: null });
+  const examEqAfterSelect = vi.fn(() => ({ single: examSingle }));
+  const examSelect = vi.fn(() => ({ eq: examEqAfterSelect }));
   const eqAfterUpdate = vi.fn().mockResolvedValue({ error: null });
   const update = vi.fn(() => ({ eq: eqAfterUpdate }));
-  const from = vi.fn(() => ({ select, update }));
+
+  const auditMaybeSingle = vi.fn().mockResolvedValue({ data: archiveLog, error: null });
+  const auditLimit = vi.fn(() => ({ maybeSingle: auditMaybeSingle }));
+  const auditOrder = vi.fn(() => ({ limit: auditLimit }));
+  const auditEqAction = vi.fn(() => ({ order: auditOrder }));
+  const auditEqResourceId = vi.fn(() => ({ eq: auditEqAction }));
+  const auditEqResourceType = vi.fn(() => ({ eq: auditEqResourceId }));
+  const auditSelect = vi.fn(() => ({ eq: auditEqResourceType }));
+
+  const from = vi.fn((table: string) => {
+    if (table === "audit_logs") return { select: auditSelect };
+    return { select: examSelect, update };
+  });
 
   mocks.createAdminClient.mockReturnValue({ from });
 
-  return { from, select, update, eqAfterUpdate };
+  return { from, examSelect, update, eqAfterUpdate, auditSelect };
 }
 
 describe("archiveExamAction", () => {
@@ -78,7 +90,7 @@ describe("archiveExamAction", () => {
       status: "published",
       processing_status: "completed"
     };
-    const table = mockExamTable(exam);
+    const table = mockAdminTables(exam);
 
     await expect(archiveExamAction(formDataForExam())).rejects.toThrow("redirect:/admin/exams?success=Exam%20archived");
 
@@ -97,7 +109,7 @@ describe("archiveExamAction", () => {
   });
 
   it("does not archive while exam processing is active", async () => {
-    const table = mockExamTable({
+    const table = mockAdminTables({
       id: demoIds.exam,
       status: "review",
       processing_status: "processing"
@@ -109,5 +121,54 @@ describe("archiveExamAction", () => {
 
     expect(table.update).not.toHaveBeenCalled();
     expect(mocks.logAudit).not.toHaveBeenCalled();
+  });
+});
+
+describe("unarchiveExamAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.requireAdminAccess.mockResolvedValue({ user: { id: demoIds.admin }, roles: ["admin"] });
+    mocks.isDemoMode.mockReturnValue(false);
+    mocks.isSupabaseConfigured.mockReturnValue(true);
+  });
+
+  it("restores an archived exam to the status captured by the archive audit log", async () => {
+    const exam = {
+      id: demoIds.exam,
+      title: "Linear Equations Practice Exam",
+      status: "archived",
+      processing_status: "completed",
+      published_at: "2026-06-24T08:00:00.000Z"
+    };
+    const table = mockAdminTables(exam, { before_data: { status: "published" } });
+
+    await expect(unarchiveExamAction(formDataForExam())).rejects.toThrow("redirect:/admin/exams?success=Exam%20unarchived");
+
+    expect(table.update).toHaveBeenCalledWith({ status: "published" });
+    expect(table.eqAfterUpdate).toHaveBeenCalledWith("id", demoIds.exam);
+    expect(mocks.logAudit).toHaveBeenCalledWith({
+      actorId: demoIds.admin,
+      action: "exam_unarchived",
+      resourceType: "exam",
+      resourceId: demoIds.exam,
+      beforeData: exam,
+      afterData: { status: "published" }
+    });
+  });
+
+  it("falls back to review for archived exams without previous status history", async () => {
+    const table = mockAdminTables(
+      {
+        id: demoIds.exam,
+        status: "archived",
+        processing_status: "completed",
+        published_at: null
+      },
+      null
+    );
+
+    await expect(unarchiveExamAction(formDataForExam())).rejects.toThrow("redirect:/admin/exams?success=Exam%20unarchived");
+
+    expect(table.update).toHaveBeenCalledWith({ status: "review" });
   });
 });
