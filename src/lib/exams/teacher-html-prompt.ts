@@ -71,6 +71,9 @@ Required output structure:
 - Inside the full HTML file, create exactly one <section data-question-number="..."> for each printed question number.
 - Use the printed question number exactly as shown on the paper.
 - Keep subparts such as (a), (b), (i), and (ii) inside the same section when they belong to the same printed question number.
+- If a section contains only one labelled part or subpart, include the full visible label in data-question-number, such as "4(a)" or "9(a)(i)".
+- If a section contains multiple parts under the same parent question, use the parent question number in data-question-number, such as "2", and keep each part label inside the section.
+- Never use data-question-number="4" for a section whose only answer is labelled 4(a); use data-question-number="4(a)" instead.
 - Do not invent, rename, merge, or skip question numbers.
 - Put the complete worked answer inside each section.
 

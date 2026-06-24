@@ -9,6 +9,12 @@ describe("teacher HTML external LLM prompt", () => {
     expect(teacherHtmlAnswerPrompt).toContain("Put the complete worked answer inside each section.");
   });
 
+  it("prevents parent-number sections for single labelled subparts", () => {
+    expect(teacherHtmlAnswerPrompt).toContain('include the full visible label in data-question-number, such as "4(a)"');
+    expect(teacherHtmlAnswerPrompt).toContain('Never use data-question-number="4" for a section whose only answer is labelled 4(a)');
+    expect(teacherHtmlAnswerPrompt).toContain('use data-question-number="4(a)" instead');
+  });
+
   it("asks for the sample-style worked solution layout within each section", () => {
     expect(teacherHtmlAnswerPrompt).toContain("Match a clean full-solution worksheet style");
     expect(teacherHtmlAnswerPrompt).toContain("Start each section with a heading containing the question number");
