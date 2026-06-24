@@ -78,7 +78,7 @@ Grants can target any level (year/subject/chapter/question/recording/solution ma
 This is the most complex subsystem — see `documentation.md` ("Exam Intake And Review") before changing it. Three intake modes, chosen at creation and immutable:
 
 - `ai_solved` — single PDF; AI transcribes questions and writes worked Markdown answers.
-- `teacher_html` — PDF + a strict answer HTML file (one `<section data-question-number="...">` per question, local images only as `assets/filename.png`, KaTeX via `<span data-math>`/`<div data-math-display>`); AI transcribes questions only and must not answer them.
+- `teacher_html` — PDF + a strict answer HTML file (one `<section data-question-number="...">` per question, local images only as `assets/filename.png`, KaTeX via `<span data-math>`/`<div data-math-display>`); the upload UI can provide a prompt for an external LLM to generate filled answers, while app AI transcribes questions only and must not answer them.
 - `handwritten_images` — question groups with ordered question/answer images, no AI transcription.
 
 Key pieces:

@@ -179,14 +179,14 @@ Manage exams at `/admin/exams`.
 Choose one intake mode:
 
 - `ai_solved`: upload one PDF. AI transcribes the questions and creates worked Markdown answers.
-- `teacher_html`: upload one PDF, one strict answer HTML file, and any local HTML images. AI transcribes questions only and is explicitly forbidden from answering them.
+- `teacher_html`: upload one PDF, one strict answer HTML file, and any local HTML images. The upload form includes a prompt that teachers can run in an external LLM to generate the filled answer HTML. The app AI transcribes questions only and is explicitly forbidden from answering them.
 - `handwritten_images`: create question groups and upload ordered question and answer images without AI transcription.
 
 All uploads use generic signed uploads to the private `exam-assets` bucket. Legacy PDF files may remain in `exam-sources`. Image uploads are retained as staff-only originals and normalized to stripped WebP display assets (maximum 2400 px, quality 88).
 
 For PDF modes, open the exam after upload and start background processing. OpenAI webhook completion and status polling share one idempotent database finalizer. Reviewers can add, delete and reorder questions, edit mode-specific content, clear warnings, upload custom visuals, and crop graphs or diagrams from the source PDF with the PDF.js crop tool. Question and answer visuals can be placed before content, after content, or inline through editor-inserted visual markers.
 
-Teacher HTML must contain exactly one `<section data-question-number="...">` per transcribed question. Local images use `assets/filename.png`; external, data, and blob URLs are rejected. Use `<span data-math>...</span>` or `<div data-math-display>...</div>` for KaTeX math.
+Teacher HTML must contain exactly one `<section data-question-number="...">` per transcribed question. Local images use `assets/filename.png`; external, data, and blob URLs are rejected. Use `<span data-math>...</span>` or `<div data-math-display>...</div>` for KaTeX math. The external LLM prompt asks for filled sections only; document boilerplate, scripts, styles, links, forms, frames, and embedded objects are not accepted.
 
 Handwritten groups require at least one question image and one answer image before publication. In PDF modes, a question marked as requiring a visual needs a cropped visual unless the teacher explicitly marks the separate visual unnecessary.
 

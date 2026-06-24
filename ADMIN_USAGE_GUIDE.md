@@ -133,14 +133,14 @@ Go to `/admin/exams`.
 
 1. Select an intake mode, subject, covered chapters, title, and description.
 2. For **AI questions and answers**, upload one PDF, open the exam, and start AI processing.
-3. For **Teacher HTML answers**, upload one PDF, one HTML answer file, and any images referenced as `assets/filename.ext`; then start question-only AI transcription.
+3. For **Teacher HTML answers**, copy or download the LLM prompt from the upload form, run it with the source paper in your preferred LLM, upload the filled HTML answer file and any images referenced as `assets/filename.ext`, then start question-only AI transcription.
 4. For **Handwritten question and answer images**, open the created draft, add question groups, and upload ordered images on both sides.
 5. For either PDF mode, use the crop tool or custom visual upload to attach graphs, diagrams, tables, maps, or other visuals.
 6. Compare all transcribed content with the source, correct marks and page references, resolve warnings, and add or reorder questions and assets as needed.
 7. Select **Save draft** while reviewing.
 8. Select **Approve and publish entire exam** only when every question satisfies its mode.
 
-Teacher HTML uses one `<section data-question-number="...">` for each answer. Duplicate, missing, or extra question numbers block import. External image URLs, scripts, styles, event handlers, forms, frames, links, and embedded objects are not accepted. Math can use `<span data-math>...</span>` or `<div data-math-display>...</div>`.
+Teacher HTML uses one `<section data-question-number="...">` for each filled answer. Duplicate, missing, or extra question numbers block import. External image URLs, scripts, styles, event handlers, forms, frames, links, and embedded objects are not accepted. Math can use `<span data-math>...</span>` or `<div data-math-display>...</div>`.
 
 An AI-marked visual requirement blocks publication until a visual is attached or a teacher explicitly confirms that a separate visual is unnecessary. Visuals can be placed before content, after content, or inline in the question or answer. Every handwritten group requires at least one question image and one answer image.
 

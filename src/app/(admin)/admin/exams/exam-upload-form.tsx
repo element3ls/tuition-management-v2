@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check, Clipboard, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/admin/admin-ui";
 import { uploadFileToSignedUrl } from "@/lib/exams/signed-upload";
+import { teacherHtmlAnswerPrompt, teacherHtmlPromptFileName } from "@/lib/exams/teacher-html-prompt";
 import type { Chapter, ExamIntakeMode, Subject } from "@/types/domain";
 
 type PreparedUpload = {
@@ -42,6 +44,29 @@ export function ExamUploadForm({ subjects, chapters }: { subjects: Subject[]; ch
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [promptCopied, setPromptCopied] = useState(false);
+
+  const copyTeacherHtmlPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(teacherHtmlAnswerPrompt);
+      setPromptCopied(true);
+      window.setTimeout(() => setPromptCopied(false), 2000);
+    } catch {
+      setError("Could not copy the prompt. Download it instead.");
+    }
+  };
+
+  const downloadTeacherHtmlPrompt = () => {
+    const blob = new Blob([teacherHtmlAnswerPrompt], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = teacherHtmlPromptFileName;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -222,6 +247,26 @@ export function ExamUploadForm({ subjects, chapters }: { subjects: Subject[]; ch
       ) : null}
       {intakeMode === "teacher_html" ? (
         <>
+          <div className="rounded-md border border-border/70 bg-muted/20 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="max-w-xl text-sm">
+                <p className="font-medium">Generate the filled answer HTML with an external LLM</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Run this prompt with the source paper in your preferred LLM, then upload the returned HTML below.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={copyTeacherHtmlPrompt} disabled={busy}>
+                  {promptCopied ? <Check className="size-3.5" /> : <Clipboard className="size-3.5" />}
+                  {promptCopied ? "Copied" : "Copy prompt"}
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={downloadTeacherHtmlPrompt} disabled={busy}>
+                  <Download className="size-3.5" />
+                  Download prompt
+                </Button>
+              </div>
+            </div>
+          </div>
           <Field label="Teacher answer HTML">
             <Input name="answer_html" type="file" accept=".html,text/html,application/xhtml+xml" required disabled={busy} />
           </Field>
