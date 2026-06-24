@@ -872,6 +872,45 @@ export async function updateMaterialAction(formData: FormData) {
   redirect("/admin/materials?success=Material%20updated");
 }
 
+export async function archiveExamAction(formData: FormData) {
+  const { user } = await requireAdminAccess();
+  const examId = z.string().uuid().parse(textValue(formData, "exam_id"));
+
+  if (isDemoMode()) await demoRedirect("/admin/exams");
+  ensureSupabaseReady();
+
+  const supabase = createAdminClient();
+  const { data: beforeData, error: fetchError } = await supabase.from("exams").select("*").eq("id", examId).single();
+  if (fetchError || !beforeData) {
+    redirect("/admin/exams?error=Exam%20not%20found");
+  }
+
+  if (beforeData.status === "archived") {
+    redirect("/admin/exams?success=Exam%20already%20archived");
+  }
+
+  if (beforeData.processing_status === "processing") {
+    redirect("/admin/exams?error=Wait%20for%20exam%20processing%20to%20finish%20before%20archiving");
+  }
+
+  const payload = { status: "archived" };
+  const { error } = await supabase.from("exams").update(payload).eq("id", examId);
+  if (error) throw new Error(error.message);
+
+  await logAudit({
+    actorId: user.id,
+    action: "exam_archived",
+    resourceType: "exam",
+    resourceId: examId,
+    beforeData,
+    afterData: payload
+  });
+
+  revalidatePath("/admin/exams");
+  revalidatePath(`/admin/exams/${examId}`);
+  redirect("/admin/exams?success=Exam%20archived");
+}
+
 export async function createTagAction(formData: FormData) {
   const { user } = await requireAdminAccess();
   const name = textValue(formData, "name");

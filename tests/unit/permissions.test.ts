@@ -150,6 +150,12 @@ describe("permission resolver", () => {
     await expect(
       canAccessResource({ userId: demoIds.student, resourceType: "exam", resourceId: demoIds.exam, permission: "view", now }, draftExam)
     ).resolves.toBe(false);
+
+    const archivedExam = cloneDemoData();
+    archivedExam.exams[0].status = "archived";
+    await expect(
+      canAccessResource({ userId: demoIds.student, resourceType: "exam", resourceId: demoIds.exam, permission: "view", now }, archivedExam)
+    ).resolves.toBe(false);
   });
 
   it("requires download permission for downloads while download implies view", async () => {

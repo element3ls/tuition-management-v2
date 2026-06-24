@@ -1,14 +1,53 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { IconArchive } from "@tabler/icons-react";
 import { AdminDialog, CreateButton, EmptyTable, StatusBadge } from "@/components/admin/admin-ui";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { archiveExamAction } from "@/features/admin/actions";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getAppData } from "@/server/data/app-data";
 import { ExamUploadForm } from "@/app/(admin)/admin/exams/exam-upload-form";
+
+type ExamListItem = Awaited<ReturnType<typeof getAppData>>["exams"][number];
+
+function ArchiveExamDialog({ exam }: { exam: ExamListItem }) {
+  if (exam.status === "archived") {
+    return <span className="text-xs text-muted-foreground">Archived</span>;
+  }
+
+  const isProcessing = exam.processing_status === "processing";
+
+  return (
+    <AdminDialog
+      title="Archive exam"
+      description="This is a soft archive. The exam remains in admin records but is hidden from students."
+      trigger={
+        <Button type="button" variant="destructive" size="sm">
+          <IconArchive className="size-3.5" />
+          Archive
+        </Button>
+      }
+    >
+      <form action={archiveExamAction} className="grid gap-4" data-mutation-form>
+        <input name="exam_id" type="hidden" value={exam.id} />
+        <p className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-muted-foreground">
+          Archive <span className="font-semibold text-foreground">{exam.title}</span>? You can keep the record for review,
+          but students will no longer be able to open it.
+        </p>
+        {isProcessing ? (
+          <Alert variant="destructive">Wait for AI processing to finish before archiving this exam.</Alert>
+        ) : null}
+        <Button type="submit" variant="destructive" disabled={isProcessing}>
+          Archive exam
+        </Button>
+      </form>
+    </AdminDialog>
+  );
+}
 
 export default async function ExamsPage({
   searchParams
@@ -79,10 +118,13 @@ export default async function ExamsPage({
                   <TableCell>{questionCount}</TableCell>
                   <TableCell>{formatDistanceToNow(new Date(exam.updated_at), { addSuffix: true })}</TableCell>
                   <TableCell><StatusBadge status={exam.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <Button render={<Link href={`/admin/exams/${exam.id}`} />} nativeButton={false} variant="outline" size="sm">
-                      Review
-                    </Button>
+                  <TableCell>
+                    <div className="flex justify-end gap-2">
+                      <Button render={<Link href={`/admin/exams/${exam.id}`} />} nativeButton={false} variant="outline" size="sm">
+                        Review
+                      </Button>
+                      <ArchiveExamDialog exam={exam} />
+                    </div>
                   </TableCell>
                 </TableRow>
               );
