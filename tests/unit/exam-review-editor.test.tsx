@@ -28,6 +28,14 @@ const question: ExamQuestion = {
   updated_at: "2026-06-09T00:00:00.000Z"
 };
 
+const teacherHtmlQuestion: ExamQuestion = {
+  ...question,
+  id: "question-html-1",
+  answer_text: null,
+  answer_html: '<p>Answer <span data-math="x=2"></span>.</p><div data-math-display="\\boxed{x=2}"></div>',
+  answer_format: "html"
+};
+
 describe("exam review editor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -96,6 +104,33 @@ describe("exam review editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Student preview" }));
 
     expect(document.querySelectorAll(".katex").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("converts teacher HTML answers into editable Markdown with preview", () => {
+    render(
+      <ExamReviewEditor
+        examId="exam-1"
+        intakeMode="teacher_html"
+        examTitle="Algebra Exam"
+        examDescription={null}
+        questions={[teacherHtmlQuestion]}
+        assets={[]}
+        published={false}
+      />
+    );
+
+    expect(screen.queryByLabelText("Teacher answer HTML")).not.toBeInTheDocument();
+
+    const answerTextarea = screen.getByLabelText("Worked answer Markdown") as HTMLTextAreaElement;
+    expect(answerTextarea.value).toContain("Answer $x=2$.");
+    expect(answerTextarea.value).toContain("$$");
+    expect(answerTextarea.value).toContain("\\boxed{x=2}");
+
+    fireEvent.change(answerTextarea, { target: { value: "Updated answer\n\n$$\n\\boxed{x=5}\n$$" } });
+    fireEvent.click(screen.getByRole("button", { name: "Student preview" }));
+
+    expect(screen.getByText(/Updated answer/)).toBeInTheDocument();
+    expect(document.querySelector(".katex")).not.toBeNull();
   });
 
   it("asks for confirmation before removing draft questions", () => {

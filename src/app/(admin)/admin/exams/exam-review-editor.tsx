@@ -71,12 +71,143 @@ function formatsForMode(mode: ExamIntakeMode) {
   return { questionFormat: "markdown" as const, answerFormat: "markdown" as const };
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function htmlToMarkdown(html: string) {
+  if (!html.trim()) return "";
+  const document = new DOMParser().parseFromString(html, "text/html");
+
+  const renderInline = (node: ChildNode): string => {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+    if (!(node instanceof Element)) return "";
+
+    const displayMath = node.getAttribute("data-math-display");
+    if (displayMath !== null) return `\n$$\n${displayMath.trim()}\n$$\n`;
+    const inlineMath = node.getAttribute("data-math");
+    if (inlineMath !== null) return `$${inlineMath.trim()}$`;
+    const assetId = node.getAttribute("data-exam-asset-id");
+    if (assetId !== null) return `\n\n${markdownInlineMarker(assetId.trim())}\n\n`;
+
+    const content = Array.from(node.childNodes).map(renderInline).join("");
+    if (node.tagName === "STRONG" || node.tagName === "B") return `**${content}**`;
+    if (node.tagName === "EM" || node.tagName === "I") return `_${content}_`;
+    if (node.tagName === "BR") return "\n";
+    return content;
+  };
+
+  const renderBlock = (element: Element): string => {
+    const content = Array.from(element.childNodes).map(renderInline).join("").trim();
+    if (element.hasAttribute("data-math-display")) return renderInline(element).trim();
+    if (element.hasAttribute("data-exam-asset-id")) return renderInline(element).trim();
+    if (!content) return "";
+    if (element.tagName === "H2") return `## ${content}`;
+    if (element.tagName === "H3") return `### ${content}`;
+    if (element.tagName === "H4") return `#### ${content}`;
+    if (element.tagName === "LI") return `- ${content}`;
+    if (element.tagName === "UL" || element.tagName === "OL") {
+      return Array.from(element.children).map(renderBlock).filter(Boolean).join("\n");
+    }
+    return content;
+  };
+
+  return Array.from(document.body.children).map(renderBlock).filter(Boolean).join("\n\n").trim();
+}
+
+function plainMarkdownToHtml(value: string) {
+  return escapeHtml(value)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/_([^_]+)_/g, "<em>$1</em>");
+}
+
+function inlineMarkdownToHtml(value: string) {
+  const parts: string[] = [];
+  const mathPattern = /\$([^$\n]+)\$/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = mathPattern.exec(value))) {
+    parts.push(plainMarkdownToHtml(value.slice(lastIndex, match.index)));
+    parts.push(`<span data-math="${escapeHtml(match[1].trim())}"></span>`);
+    lastIndex = mathPattern.lastIndex;
+  }
+
+  parts.push(plainMarkdownToHtml(value.slice(lastIndex)));
+  return parts.join("");
+}
+
+function markdownToTeacherHtml(markdown: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const blocks: string[] = [];
+  let paragraph: string[] = [];
+  let math: string[] | null = null;
+
+  const flushParagraph = () => {
+    const text = paragraph.join(" ").trim();
+    if (text) blocks.push(`<p>${inlineMarkdownToHtml(text)}</p>`);
+    paragraph = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (math) {
+      if (trimmed === "$$") {
+        const latex = math.join("\n").trim();
+        if (latex) blocks.push(`<div data-math-display="${escapeHtml(latex)}"></div>`);
+        math = null;
+      } else {
+        math.push(line);
+      }
+      continue;
+    }
+
+    if (trimmed === "$$") {
+      flushParagraph();
+      math = [];
+      continue;
+    }
+    const assetMatch = /^\{\{\s*exam_asset:([a-zA-Z0-9_-]+)\s*\}\}$/.exec(trimmed);
+    if (assetMatch) {
+      flushParagraph();
+      blocks.push(htmlInlineMarker(assetMatch[1]));
+      continue;
+    }
+    const heading = /^(#{2,4})\s+(.+)$/.exec(trimmed);
+    if (heading) {
+      flushParagraph();
+      blocks.push(`<h${heading[1].length}>${inlineMarkdownToHtml(heading[2])}</h${heading[1].length}>`);
+      continue;
+    }
+    if (!trimmed) {
+      flushParagraph();
+      continue;
+    }
+    paragraph.push(trimmed);
+  }
+
+  if (math) {
+    const latex = math.join("\n").trim();
+    if (latex) blocks.push(`<div data-math-display="${escapeHtml(latex)}"></div>`);
+  }
+  flushParagraph();
+
+  return blocks.join("\n").trim();
+}
+
 function toEditable(question: ExamQuestion, assets: ExamAsset[]): EditableQuestion {
+  const answerMarkdown =
+    question.answer_format === "html" && question.answer_html ? htmlToMarkdown(question.answer_html) : question.answer_text;
+
   return {
     id: question.id,
     questionNumber: question.question_number,
     questionText: question.question_text,
-    answerText: question.answer_text,
+    answerText: answerMarkdown,
     questionHtml: question.question_html,
     answerHtml: question.answer_html,
     questionFormat: question.question_format,
@@ -108,7 +239,7 @@ function newQuestion(mode: ExamIntakeMode, sortOrder: number): EditableQuestion 
     id: crypto.randomUUID(),
     questionNumber: String(sortOrder),
     questionText: mode === "handwritten_images" ? null : "",
-    answerText: mode === "ai_solved" ? "" : null,
+    answerText: mode === "handwritten_images" ? null : "",
     questionHtml: null,
     answerHtml: mode === "teacher_html" ? "" : null,
     ...formatsForMode(mode),
@@ -123,10 +254,15 @@ function newQuestion(mode: ExamIntakeMode, sortOrder: number): EditableQuestion 
 }
 
 function previewQuestion(question: EditableQuestion) {
+  const answerHtml =
+    question.answerFormat === "html" && question.answerText !== null
+      ? markdownToTeacherHtml(question.answerText)
+      : question.answerHtml;
+
   return {
     ...question,
     questionHtml: question.questionHtml ? DOMPurify.sanitize(question.questionHtml) : null,
-    answerHtml: question.answerHtml ? DOMPurify.sanitize(question.answerHtml) : null
+    answerHtml: answerHtml ? DOMPurify.sanitize(answerHtml) : null
   };
 }
 
@@ -176,7 +312,8 @@ function withInlineMarker(question: EditableQuestion, asset: EditableAsset) {
     return { ...question, answerText: `${question.answerText ?? ""}\n\n${markdownInlineMarker(asset.id)}\n` };
   }
   if (asset.role === "answer_visual" && question.answerFormat === "html") {
-    return { ...question, answerHtml: `${question.answerHtml ?? ""}\n${htmlInlineMarker(asset.id)}\n` };
+    const answerText = `${question.answerText ?? ""}\n\n${markdownInlineMarker(asset.id)}\n`;
+    return { ...question, answerText, answerHtml: markdownToTeacherHtml(answerText) };
   }
   return question;
 }
@@ -286,6 +423,14 @@ export function ExamReviewEditor({
     setItems((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: value } : item)));
   };
 
+  const updateTeacherAnswerMarkdown = (index: number, value: string) => {
+    setItems((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, answerText: value, answerHtml: markdownToTeacherHtml(value) } : item
+      )
+    );
+  };
+
   const moveQuestion = (index: number, direction: -1 | 1) => {
     setItems((current) => {
       const target = index + direction;
@@ -372,10 +517,15 @@ export function ExamReviewEditor({
     setBusy(true);
     setError(null);
     setMessage(null);
+    const questionsForSave = items.map((question) =>
+      question.answerFormat === "html" && question.answerText !== null
+        ? { ...question, answerHtml: markdownToTeacherHtml(question.answerText) }
+        : question
+    );
     const response = await fetch(`/api/admin/exams/${examId}/${publish ? "publish" : "questions"}`, {
       method: publish ? "POST" : "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questions: items })
+      body: JSON.stringify({ questions: questionsForSave })
     });
     const result = (await response.json()) as { error?: string };
     setBusy(false);
@@ -551,15 +701,14 @@ export function ExamReviewEditor({
                   />
                 ) : null}
                 {question.answerFormat === "html" ? (
-                  <label className="grid gap-1.5 text-sm font-medium">
-                    Teacher answer HTML
-                    <Textarea
-                      value={question.answerHtml ?? ""}
-                      onChange={(event) => update(index, "answerHtml", event.target.value)}
-                      className="min-h-48 font-mono text-sm"
-                      disabled={published || busy}
-                    />
-                  </label>
+                  <MarkdownLatexEditor
+                    label="Worked answer Markdown"
+                    name={`questions.${index}.answerText`}
+                    value={question.answerText ?? ""}
+                    onValueChange={(value) => updateTeacherAnswerMarkdown(index, value)}
+                    textareaClassName="min-h-48"
+                    disabled={published || busy}
+                  />
                 ) : null}
 
                 {!published && intakeMode === "handwritten_images" ? (
