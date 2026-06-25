@@ -37,7 +37,7 @@ export default async function AccountPage({
         />
         <div className="grid gap-4">
           {user.must_change_password || params.passwordChange === "required" ? (
-            <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+            <Alert className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/70 dark:bg-amber-950 dark:text-amber-200">
               You must set a new password before accessing student content.
             </Alert>
           ) : null}

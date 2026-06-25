@@ -3,6 +3,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ThemeToggleCorner } from "@/components/layout/theme-toggle";
 
 export default async function ResetPasswordPage({
   searchParams
@@ -13,6 +14,7 @@ export default async function ResetPasswordPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
+      <ThemeToggleCorner />
       <Card>
         <CardHeader>
           <CardTitle>Reset password</CardTitle>

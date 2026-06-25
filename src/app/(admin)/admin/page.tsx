@@ -75,7 +75,7 @@ export default async function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="font-mono text-3xl font-semibold tracking-tight">{value}</p>
-              {delta ? <p className="mt-1 text-[11px] font-medium text-emerald-600">{delta}</p> : null}
+              {delta ? <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">{delta}</p> : null}
             </CardContent>
           </Card>
         ))}

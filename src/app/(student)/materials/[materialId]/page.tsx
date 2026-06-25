@@ -36,7 +36,7 @@ export default async function MaterialPage({ params }: { params: Promise<{ mater
       <Card className="max-w-xl">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <span className={`flex size-12 shrink-0 items-center justify-center rounded-lg ${isPdf ? "bg-red-50 text-red-600" : "bg-secondary text-secondary-foreground"}`}>
+            <span className={`flex size-12 shrink-0 items-center justify-center rounded-lg ${isPdf ? "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400" : "bg-secondary text-secondary-foreground"}`}>
               {isPdf ? <IconFileTypePdf className="size-6" /> : <IconFile className="size-6" />}
             </span>
             <CardTitle>{material.file_name}</CardTitle>

@@ -13,10 +13,10 @@ import { searchAccessibleContent } from "@/lib/search";
 import { getAppData } from "@/server/data/app-data";
 
 const resultMeta = {
-  recording: { icon: IconVideo, tone: "bg-sky-50 text-sky-600" },
-  exam: { icon: IconFileCheck, tone: "bg-amber-50 text-amber-600" },
+  recording: { icon: IconVideo, tone: "bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-400" },
+  exam: { icon: IconFileCheck, tone: "bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400" },
   chapter: { icon: IconBook2, tone: "bg-secondary text-secondary-foreground" },
-  solution_material: { icon: IconFileText, tone: "bg-emerald-50 text-emerald-600" },
+  solution_material: { icon: IconFileText, tone: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400" },
   question: { icon: IconHelpCircle, tone: "bg-secondary text-secondary-foreground" }
 } as const;
 

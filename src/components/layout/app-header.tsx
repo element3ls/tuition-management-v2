@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logoutAction } from "@/features/auth/actions";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { hasAdminRole } from "@/lib/auth/roles";
 import type { Profile, RoleName } from "@/types/domain";
 
@@ -61,6 +62,7 @@ export function AppHeader({
           <span className="hidden truncate text-sm text-muted-foreground sm:inline">
             {user.full_name}
           </span>
+          <ThemeToggle />
           <Link
             className={buttonVariants({ variant: "outline", size: "sm" })}
             href="/account"

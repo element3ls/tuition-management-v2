@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TutorEaseMark } from "@/components/layout/app-header";
+import { ThemeToggleCorner } from "@/components/layout/theme-toggle";
 
 export default async function LoginPage({
   searchParams
@@ -15,6 +16,7 @@ export default async function LoginPage({
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-background to-muted/60 px-4">
+      <ThemeToggleCorner />
       <div className="mb-6 flex flex-col items-center gap-2">
         <TutorEaseMark size={36} />
         <span className="text-base font-semibold tracking-tight text-foreground">TutorEase</span>

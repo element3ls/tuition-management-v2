@@ -2,10 +2,12 @@ import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { logoutAction } from "@/features/auth/actions";
+import { ThemeToggleCorner } from "@/components/layout/theme-toggle";
 
 export default function AccessDeniedPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4">
+      <ThemeToggleCorner />
       <Alert className="space-y-4">
         <h1 className="text-xl font-semibold">Access denied</h1>
         <p className="text-muted-foreground">Your account does not have permission to open this page.</p>

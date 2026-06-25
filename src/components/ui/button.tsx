@@ -10,7 +10,7 @@ const buttonVariants = cva(
       variant: {
         // Deep navy — primary action
         default:
-          "bg-primary text-primary-foreground hover:bg-[hsl(240,25%,48%)] active:bg-[hsl(240,43%,20%)]",
+          "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80",
         // Soft periwinkle — adjacent/secondary actions
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-accent active:bg-accent",

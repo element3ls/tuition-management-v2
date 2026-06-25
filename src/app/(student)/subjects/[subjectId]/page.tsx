@@ -72,8 +72,8 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
               <Card key={exam.id}>
                 <CardContent className="pt-4">
                   <div className="flex items-start gap-3">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-amber-50">
-                      <IconFileCheck className="size-4 text-amber-600" />
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-amber-50 dark:bg-amber-950">
+                      <IconFileCheck className="size-4 text-amber-600 dark:text-amber-400" />
                     </span>
                     <div>
                       <Link href={`/exams/${exam.id}`} className="text-sm font-medium leading-snug text-foreground hover:text-primary hover:underline">

@@ -5,6 +5,7 @@ import "katex/dist/katex.min.css";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { SavingOverlayProvider } from "@/components/layout/saving-overlay-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -28,12 +29,20 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn("font-sans", geistSans.variable, geistMono.variable)}
+      suppressHydrationWarning
     >
       <body>
-        {children}
-        <Suspense fallback={null}>
-          <SavingOverlayProvider />
-        </Suspense>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Suspense fallback={null}>
+            <SavingOverlayProvider />
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   );
