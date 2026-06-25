@@ -15,6 +15,7 @@ describe("student access integration flow", () => {
     ).resolves.toBe(false);
 
     data.memberships.push({
+      organization_id: demoIds.organization,
       id: "11000000-0000-4000-8000-000000000099",
       student_id: demoIds.student,
       group_id: demoIds.group,
@@ -24,6 +25,7 @@ describe("student access integration flow", () => {
       created_at: "2026-05-17T00:00:00.000Z"
     });
     data.accessGrants.push({
+      organization_id: demoIds.organization,
       id: "80000000-0000-4000-8000-000000000099",
       grantee_type: "group",
       grantee_id: demoIds.group,

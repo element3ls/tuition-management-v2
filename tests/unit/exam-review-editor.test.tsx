@@ -9,6 +9,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const question: ExamQuestion = {
+  organization_id: "01000000-0000-4000-8000-000000000001",
   id: "question-1",
   exam_id: "exam-1",
   question_number: "1",

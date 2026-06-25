@@ -3,6 +3,7 @@ import type { AppData } from "@/types/domain";
 const now = "2026-05-17T00:00:00.000Z";
 
 export const demoIds = {
+  organization: "01000000-0000-4000-8000-000000000001",
   student: "00000000-0000-4000-8000-000000000001",
   admin: "00000000-0000-4000-8000-000000000002",
   otherStudent: "00000000-0000-4000-8000-000000000003",
@@ -17,6 +18,43 @@ export const demoIds = {
 } as const;
 
 export const demoData: AppData = {
+  organizations: [
+    {
+      id: demoIds.organization,
+      name: "Legacy Tuition Center",
+      slug: "legacy-tuition-center",
+      status: "active",
+      metadata: { source: "demo" },
+      created_at: now,
+      updated_at: now
+    }
+  ],
+  organizationMemberships: [
+    {
+      organization_id: demoIds.organization,
+      user_id: demoIds.student,
+      role: "student",
+      status: "active",
+      created_at: now,
+      updated_at: now
+    },
+    {
+      organization_id: demoIds.organization,
+      user_id: demoIds.admin,
+      role: "owner",
+      status: "active",
+      created_at: now,
+      updated_at: now
+    },
+    {
+      organization_id: demoIds.organization,
+      user_id: demoIds.otherStudent,
+      role: "student",
+      status: "active",
+      created_at: now,
+      updated_at: now
+    }
+  ],
   profiles: [
     {
       id: demoIds.student,
@@ -53,6 +91,7 @@ export const demoData: AppData = {
   ],
   studentProfiles: [
     {
+      organization_id: demoIds.organization,
       user_id: demoIds.student,
       guardian_name: "Demo Guardian",
       phone: "+60120000000",
@@ -61,6 +100,7 @@ export const demoData: AppData = {
       updated_at: now
     },
     {
+      organization_id: demoIds.organization,
       user_id: demoIds.otherStudent,
       guardian_name: null,
       phone: null,
@@ -71,6 +111,7 @@ export const demoData: AppData = {
   ],
   groups: [
     {
+      organization_id: demoIds.organization,
       id: demoIds.group,
       name: "Year 7 Maths Alpha",
       description: "Local demo access group.",
@@ -81,6 +122,7 @@ export const demoData: AppData = {
   ],
   memberships: [
     {
+      organization_id: demoIds.organization,
       id: "11000000-0000-4000-8000-000000000001",
       student_id: demoIds.student,
       group_id: demoIds.group,
@@ -92,6 +134,7 @@ export const demoData: AppData = {
   ],
   years: [
     {
+      organization_id: demoIds.organization,
       id: demoIds.year,
       name: "Year 7",
       description: "Lower secondary foundation year.",
@@ -104,6 +147,7 @@ export const demoData: AppData = {
   ],
   subjects: [
     {
+      organization_id: demoIds.organization,
       id: demoIds.subject,
       year_id: demoIds.year,
       name: "Mathematics",
@@ -117,6 +161,7 @@ export const demoData: AppData = {
   ],
   chapters: [
     {
+      organization_id: demoIds.organization,
       id: demoIds.chapter,
       subject_id: demoIds.subject,
       title: "Linear Equations",
@@ -130,6 +175,7 @@ export const demoData: AppData = {
   ],
   questions: [
     {
+      organization_id: demoIds.organization,
       id: demoIds.question,
       chapter_id: demoIds.chapter,
       title: "Balancing Equations",
@@ -144,6 +190,7 @@ export const demoData: AppData = {
   ],
   recordings: [
     {
+      organization_id: demoIds.organization,
       id: demoIds.recording,
       chapter_id: demoIds.chapter,
       question_id: demoIds.question,
@@ -164,6 +211,7 @@ export const demoData: AppData = {
   ],
   solutionMaterials: [
     {
+      organization_id: demoIds.organization,
       id: demoIds.material,
       chapter_id: demoIds.chapter,
       question_id: demoIds.question,
@@ -184,6 +232,7 @@ export const demoData: AppData = {
   ],
   exams: [
     {
+      organization_id: demoIds.organization,
       id: demoIds.exam,
       subject_id: demoIds.subject,
       title: "Linear Equations Practice Exam",
@@ -211,6 +260,7 @@ export const demoData: AppData = {
   ],
   examChapters: [
     {
+      organization_id: demoIds.organization,
       exam_id: demoIds.exam,
       chapter_id: demoIds.chapter,
       created_at: now
@@ -218,6 +268,7 @@ export const demoData: AppData = {
   ],
   examQuestions: [
     {
+      organization_id: demoIds.organization,
       id: "73000000-0000-4000-8000-000000000001",
       exam_id: demoIds.exam,
       question_number: "1",
@@ -237,6 +288,7 @@ export const demoData: AppData = {
       updated_at: now
     },
     {
+      organization_id: demoIds.organization,
       id: "73000000-0000-4000-8000-000000000002",
       exam_id: demoIds.exam,
       question_number: "2",
@@ -258,6 +310,7 @@ export const demoData: AppData = {
   ],
   examAssets: [
     {
+      organization_id: demoIds.organization,
       id: "74000000-0000-4000-8000-000000000001",
       exam_id: demoIds.exam,
       question_id: null,
@@ -289,6 +342,7 @@ export const demoData: AppData = {
   ],
   examProcessingRuns: [
     {
+      organization_id: demoIds.organization,
       id: "75000000-0000-4000-8000-000000000001",
       exam_id: demoIds.exam,
       mode: "ai_solved",
@@ -304,6 +358,7 @@ export const demoData: AppData = {
   ],
   accessGrants: [
     {
+      organization_id: demoIds.organization,
       id: "80000000-0000-4000-8000-000000000001",
       grantee_type: "group",
       grantee_id: demoIds.group,
@@ -320,6 +375,7 @@ export const demoData: AppData = {
   ],
   tags: [
     {
+      organization_id: demoIds.organization,
       id: "90000000-0000-4000-8000-000000000001",
       name: "Algebra",
       slug: "algebra",
@@ -328,6 +384,7 @@ export const demoData: AppData = {
   ],
   contentTags: [
     {
+      organization_id: demoIds.organization,
       id: "91000000-0000-4000-8000-000000000001",
       tag_id: "90000000-0000-4000-8000-000000000001",
       resource_type: "chapter",
@@ -336,6 +393,7 @@ export const demoData: AppData = {
   ],
   auditLogs: [
     {
+      organization_id: demoIds.organization,
       id: "a0000000-0000-4000-8000-000000000001",
       actor_id: demoIds.admin,
       action: "access_granted",

@@ -35,11 +35,12 @@ function tagsFor(data: AppData, resourceType: SearchResult["type"], resourceId: 
 
 export async function searchAccessibleContent(input: { userId: string; query: string; data: AppData }) {
   const { userId, query, data } = input;
+  const organizationId = data.organizations[0]?.id;
   const results: SearchResult[] = [];
 
   for (const chapter of data.chapters.sort(bySortOrderThenName)) {
     if (!includesQuery([chapter.title, chapter.description, ...tagsFor(data, "chapter", chapter.id)], query)) continue;
-    if (!(await canAccessResource({ userId, resourceType: "chapter", resourceId: chapter.id, permission: "view" }, data))) continue;
+    if (!(await canAccessResource({ userId, resourceType: "chapter", resourceId: chapter.id, permission: "view", organizationId }, data))) continue;
     results.push({
       type: "chapter",
       id: chapter.id,
@@ -52,7 +53,7 @@ export async function searchAccessibleContent(input: { userId: string; query: st
 
   for (const question of data.questions.sort(bySortOrderThenName)) {
     if (!includesQuery([question.title, question.description, question.question_text, ...tagsFor(data, "question", question.id)], query)) continue;
-    if (!(await canAccessResource({ userId, resourceType: "question", resourceId: question.id, permission: "view" }, data))) continue;
+    if (!(await canAccessResource({ userId, resourceType: "question", resourceId: question.id, permission: "view", organizationId }, data))) continue;
     results.push({
       type: "question",
       id: question.id,
@@ -72,7 +73,7 @@ export async function searchAccessibleContent(input: { userId: string; query: st
     ) {
       continue;
     }
-    if (!(await canAccessResource({ userId, resourceType: "recording", resourceId: recording.id, permission: "view" }, data))) continue;
+    if (!(await canAccessResource({ userId, resourceType: "recording", resourceId: recording.id, permission: "view", organizationId }, data))) continue;
     results.push({
       type: "recording",
       id: recording.id,
@@ -89,7 +90,15 @@ export async function searchAccessibleContent(input: { userId: string; query: st
     ) {
       continue;
     }
-    if (!(await canAccessResource({ userId, resourceType: "solution_material", resourceId: material.id, permission: "view" }, data))) continue;
+    if (
+      !(await canAccessResource({
+        userId,
+        resourceType: "solution_material",
+        resourceId: material.id,
+        permission: "view",
+        organizationId
+      }, data))
+    ) continue;
     results.push({
       type: "solution_material",
       id: material.id,
@@ -115,7 +124,7 @@ export async function searchAccessibleContent(input: { userId: string; query: st
     ) {
       continue;
     }
-    if (!(await canAccessResource({ userId, resourceType: "exam", resourceId: exam.id, permission: "view" }, data))) continue;
+    if (!(await canAccessResource({ userId, resourceType: "exam", resourceId: exam.id, permission: "view", organizationId }, data))) continue;
     results.push({
       type: "exam",
       id: exam.id,

@@ -8,6 +8,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { adminRoles, hasAnyRole } from "@/lib/auth/roles";
 import { getAuthenticatedHomePath } from "@/lib/auth/redirects";
+import { getCurrentOrganizationId, getDefaultOrganizationForUser, getUserOrganizationMemberships } from "@/lib/tenancy/server";
 import type { Profile, RoleName } from "@/types/domain";
 
 export const demoUserCookie = "demo_user_id";
@@ -52,23 +53,34 @@ export async function getCurrentUserRoles(): Promise<RoleName[]> {
   const user = await getCurrentUser();
   if (!user) return [];
 
+  const roleNames = new Set<RoleName>();
+
   if (isDemoMode()) {
-    return cloneDemoData()
+    cloneDemoData()
       .userRoles.filter((role) => role.user_id === user.id)
-      .map((role) => role.role)
-      .sort();
+      .forEach((role) => roleNames.add(role.role));
+  } else if (isSupabaseConfigured()) {
+    const supabase = createAdminClient();
+    const { data } = await supabase.from("user_roles").select("roles(name)").eq("user_id", user.id);
+
+    (data ?? [])
+      .map((row) => {
+        const roleRecord = row.roles as { name?: RoleName } | { name?: RoleName }[] | null;
+        return Array.isArray(roleRecord) ? roleRecord[0]?.name : roleRecord?.name;
+      })
+      .filter((role): role is RoleName => Boolean(role))
+      .forEach((role) => roleNames.add(role));
   }
 
-  const supabase = createAdminClient();
-  const { data } = await supabase.from("user_roles").select("roles(name)").eq("user_id", user.id);
+  const organizationId = await getCurrentOrganizationId();
+  const tenantMembership = (await getUserOrganizationMemberships(user.id)).find(
+    (membership) => membership.organization_id === organizationId
+  );
+  if (tenantMembership?.role === "owner" || tenantMembership?.role === "admin") roleNames.add("admin");
+  if (tenantMembership?.role === "teacher") roleNames.add("teacher");
+  if (tenantMembership?.role === "student") roleNames.add("student");
 
-  return (data ?? [])
-    .map((row) => {
-      const roleRecord = row.roles as { name?: RoleName } | { name?: RoleName }[] | null;
-      return Array.isArray(roleRecord) ? roleRecord[0]?.name : roleRecord?.name;
-    })
-    .filter((role): role is RoleName => Boolean(role))
-    .sort();
+  return [...roleNames].sort();
 }
 
 export async function requireAuth() {
@@ -112,5 +124,6 @@ export async function getLoginRedirect() {
   const user = await getCurrentUser();
   if (!user) return "/login";
   const roles = await getCurrentUserRoles();
-  return getAuthenticatedHomePath(user, roles);
+  const organization = await getDefaultOrganizationForUser(user.id);
+  return getAuthenticatedHomePath(user, roles, organization?.slug);
 }

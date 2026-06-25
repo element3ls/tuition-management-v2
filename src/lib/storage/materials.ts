@@ -34,6 +34,7 @@ export async function createMaterialSignedUrl(input: {
   permission: PermissionLevel;
   data: AppData;
 }) {
+  const organizationId = input.data.organizations[0]?.id;
   const material = input.data.solutionMaterials.find((item) => item.id === input.materialId);
   if (!material) {
     return { ok: false as const, error: "Material not found." };
@@ -48,7 +49,8 @@ export async function createMaterialSignedUrl(input: {
       userId: input.userId,
       resourceType: "solution_material",
       resourceId: input.materialId,
-      permission: input.permission
+      permission: input.permission,
+      organizationId
     },
     input.data
   );

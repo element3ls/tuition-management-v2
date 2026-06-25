@@ -9,6 +9,7 @@ exports[`permission resolver > returns deterministic accessible ids and tree 1`]
       "id": "20000000-0000-4000-8000-000000000001",
       "is_ai_indexable": true,
       "name": "Year 7",
+      "organization_id": "01000000-0000-4000-8000-000000000001",
       "sort_order": 1,
       "status": "published",
       "subjects": [
@@ -31,6 +32,7 @@ exports[`permission resolver > returns deterministic accessible ids and tree 1`]
                   "is_ai_indexable": true,
                   "is_downloadable": true,
                   "mime_type": "application/pdf",
+                  "organization_id": "01000000-0000-4000-8000-000000000001",
                   "question_id": "50000000-0000-4000-8000-000000000001",
                   "status": "published",
                   "storage_bucket": "solution-materials",
@@ -39,6 +41,7 @@ exports[`permission resolver > returns deterministic accessible ids and tree 1`]
                   "uploaded_by": "00000000-0000-4000-8000-000000000002",
                 },
               ],
+              "organization_id": "01000000-0000-4000-8000-000000000001",
               "questions": [
                 {
                   "chapter_id": "40000000-0000-4000-8000-000000000001",
@@ -46,6 +49,7 @@ exports[`permission resolver > returns deterministic accessible ids and tree 1`]
                   "description": "Worked algebra question.",
                   "id": "50000000-0000-4000-8000-000000000001",
                   "is_ai_indexable": true,
+                  "organization_id": "01000000-0000-4000-8000-000000000001",
                   "question_text": "Solve 2x + 5 = 17.",
                   "sort_order": 1,
                   "status": "published",
@@ -62,6 +66,7 @@ exports[`permission resolver > returns deterministic accessible ids and tree 1`]
                   "duration_seconds": 420,
                   "id": "60000000-0000-4000-8000-000000000001",
                   "is_ai_indexable": true,
+                  "organization_id": "01000000-0000-4000-8000-000000000001",
                   "question_id": "50000000-0000-4000-8000-000000000001",
                   "recorded_at": "2026-05-17T00:00:00.000Z",
                   "status": "published",
@@ -85,6 +90,7 @@ exports[`permission resolver > returns deterministic accessible ids and tree 1`]
           "id": "30000000-0000-4000-8000-000000000001",
           "is_ai_indexable": true,
           "name": "Mathematics",
+          "organization_id": "01000000-0000-4000-8000-000000000001",
           "sort_order": 1,
           "status": "published",
           "updated_at": "2026-05-17T00:00:00.000Z",

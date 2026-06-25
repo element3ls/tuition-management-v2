@@ -16,6 +16,7 @@ import {
   IconVideo,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { defaultOrganizationSlug, tenantPath } from "@/lib/tenancy/constants";
 import type { RoleName } from "@/types/domain";
 
 const links = [
@@ -32,7 +33,7 @@ const links = [
   { label: "Audit logs", href: "/admin/audit-logs",   icon: IconClipboardList },
 ] as const;
 
-export function AdminNav({ roles }: { roles: RoleName[] }) {
+export function AdminNav({ roles, orgSlug = defaultOrganizationSlug }: { roles: RoleName[]; orgSlug?: string }) {
   const pathname = usePathname();
   const canManageAdmins = roles.includes("super_admin");
 
@@ -46,12 +47,13 @@ export function AdminNav({ roles }: { roles: RoleName[] }) {
 
         const active =
           pathname === href ||
-          (href !== "/admin" && pathname.startsWith(`${href}/`));
+          pathname === tenantPath(orgSlug, href) ||
+          (href !== "/admin" && (pathname.startsWith(`${href}/`) || pathname.startsWith(`${tenantPath(orgSlug, href)}/`)));
 
         return (
           <Link
             key={href}
-            href={href}
+            href={tenantPath(orgSlug, href)}
             className={cn(
               // Base: 10px radius, 15px icon, sentence-case label
               "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",

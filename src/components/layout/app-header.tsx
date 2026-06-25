@@ -3,6 +3,7 @@ import { logoutAction } from "@/features/auth/actions";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { hasAdminRole } from "@/lib/auth/roles";
+import { defaultOrganizationSlug, tenantPath } from "@/lib/tenancy/constants";
 import type { Profile, RoleName } from "@/types/domain";
 
 // TutorEase monogram mark — rounded square, deep navy + periwinkle
@@ -30,11 +31,13 @@ export function TutorEaseMark({ size = 28 }: { size?: number }) {
 export function AppHeader({
   user,
   roles,
+  orgSlug = defaultOrganizationSlug,
 }: {
   user: Profile;
   roles: RoleName[];
+  orgSlug?: string;
 }) {
-  const homeHref = hasAdminRole(roles) ? "/admin" : "/dashboard";
+  const homeHref = tenantPath(orgSlug, hasAdminRole(roles) ? "/admin" : "/dashboard");
   const isAdmin = hasAdminRole(roles);
 
   return (

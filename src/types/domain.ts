@@ -1,4 +1,5 @@
 export type RoleName = "student" | "teacher" | "admin" | "super_admin";
+export type TenantRoleName = "owner" | "admin" | "teacher" | "student";
 
 export type ContentStatus = "draft" | "published" | "archived";
 
@@ -70,6 +71,25 @@ export type AuditAction =
   | "exam_unarchived"
   | "exam_unpublished";
 
+export type Organization = {
+  id: string;
+  name: string;
+  slug: string;
+  status: "active" | "suspended" | "archived";
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrganizationMembership = {
+  organization_id: string;
+  user_id: string;
+  role: TenantRoleName;
+  status: "active" | "inactive";
+  created_at: string;
+  updated_at: string;
+};
+
 export type Profile = {
   id: string;
   email: string;
@@ -86,6 +106,7 @@ export type UserRole = {
 };
 
 export type StudentProfile = {
+  organization_id: string;
   user_id: string;
   guardian_name: string | null;
   phone: string | null;
@@ -95,6 +116,7 @@ export type StudentProfile = {
 };
 
 export type ContentGroup = {
+  organization_id: string;
   id: string;
   name: string;
   description: string | null;
@@ -104,6 +126,7 @@ export type ContentGroup = {
 };
 
 export type StudentGroupMembership = {
+  organization_id: string;
   id: string;
   student_id: string;
   group_id: string;
@@ -114,6 +137,7 @@ export type StudentGroupMembership = {
 };
 
 export type Year = {
+  organization_id: string;
   id: string;
   name: string;
   description: string | null;
@@ -125,6 +149,7 @@ export type Year = {
 };
 
 export type Subject = {
+  organization_id: string;
   id: string;
   year_id: string;
   name: string;
@@ -137,6 +162,7 @@ export type Subject = {
 };
 
 export type Chapter = {
+  organization_id: string;
   id: string;
   subject_id: string;
   title: string;
@@ -149,6 +175,7 @@ export type Chapter = {
 };
 
 export type Question = {
+  organization_id: string;
   id: string;
   chapter_id: string;
   title: string;
@@ -162,6 +189,7 @@ export type Question = {
 };
 
 export type Recording = {
+  organization_id: string;
   id: string;
   chapter_id: string;
   question_id: string | null;
@@ -181,6 +209,7 @@ export type Recording = {
 };
 
 export type SolutionMaterial = {
+  organization_id: string;
   id: string;
   chapter_id: string;
   question_id: string | null;
@@ -200,6 +229,7 @@ export type SolutionMaterial = {
 };
 
 export type Exam = {
+  organization_id: string;
   id: string;
   subject_id: string;
   title: string;
@@ -226,12 +256,14 @@ export type Exam = {
 };
 
 export type ExamChapter = {
+  organization_id: string;
   exam_id: string;
   chapter_id: string;
   created_at: string;
 };
 
 export type ExamQuestion = {
+  organization_id: string;
   id: string;
   exam_id: string;
   question_number: string;
@@ -252,6 +284,7 @@ export type ExamQuestion = {
 };
 
 export type ExamAsset = {
+  organization_id: string;
   id: string;
   exam_id: string;
   question_id: string | null;
@@ -282,6 +315,7 @@ export type ExamAsset = {
 };
 
 export type ExamProcessingRun = {
+  organization_id: string;
   id: string;
   exam_id: string;
   mode: Extract<ExamIntakeMode, "ai_solved" | "teacher_html">;
@@ -296,6 +330,7 @@ export type ExamProcessingRun = {
 };
 
 export type AccessGrant = {
+  organization_id: string;
   id: string;
   grantee_type: GranteeType;
   grantee_id: string;
@@ -311,6 +346,7 @@ export type AccessGrant = {
 };
 
 export type Tag = {
+  organization_id: string;
   id: string;
   name: string;
   slug: string;
@@ -318,6 +354,7 @@ export type Tag = {
 };
 
 export type ContentTag = {
+  organization_id: string;
   id: string;
   tag_id: string;
   resource_type: Extract<ResourceType, "chapter" | "question" | "recording" | "solution_material" | "exam">;
@@ -325,6 +362,7 @@ export type ContentTag = {
 };
 
 export type AuditLog = {
+  organization_id: string;
   id: string;
   actor_id: string | null;
   action: AuditAction;
@@ -336,6 +374,7 @@ export type AuditLog = {
 };
 
 export type ActivityEvent = {
+  organization_id: string;
   id: string;
   user_id: string;
   event_type: ActivityEventType;
@@ -346,6 +385,8 @@ export type ActivityEvent = {
 };
 
 export type AppData = {
+  organizations: Organization[];
+  organizationMemberships: OrganizationMembership[];
   profiles: Profile[];
   userRoles: UserRole[];
   studentProfiles: StudentProfile[];

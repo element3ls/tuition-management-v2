@@ -3,6 +3,7 @@ import { importTeacherHtmlAnswers, mapTeacherAnswers, sanitizeExamHtml } from "@
 import type { ExamAsset } from "@/types/domain";
 
 const imageAsset: ExamAsset = {
+  organization_id: "01000000-0000-4000-8000-000000000001",
   id: "74000000-0000-4000-8000-000000000001",
   exam_id: "72000000-0000-4000-8000-000000000001",
   question_id: null,

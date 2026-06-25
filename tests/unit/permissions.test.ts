@@ -181,6 +181,64 @@ describe("permission resolver", () => {
     expect(canAccessAdmin(demoIds.admin, data)).toBe(true);
   });
 
+  it("honors tenant admin memberships", () => {
+    const data = cloneDemoData();
+    const secondOrgId = "01000000-0000-4000-8000-000000000099";
+    data.organizations.push({
+      id: secondOrgId,
+      name: "Second Tuition Center",
+      slug: "second-tuition-center",
+      status: "active",
+      metadata: {},
+      created_at: "2026-05-17T00:00:00.000Z",
+      updated_at: "2026-05-17T00:00:00.000Z"
+    });
+    data.organizationMemberships.push({
+      organization_id: secondOrgId,
+      user_id: demoIds.otherStudent,
+      role: "teacher",
+      status: "active",
+      created_at: "2026-05-17T00:00:00.000Z",
+      updated_at: "2026-05-17T00:00:00.000Z"
+    });
+
+    expect(canAccessAdmin(demoIds.otherStudent, data, demoIds.organization)).toBe(false);
+    expect(canAccessAdmin(demoIds.otherStudent, data, secondOrgId)).toBe(true);
+  });
+
+  it("denies cross-tenant resource access even with a valid user grant", async () => {
+    const data = cloneDemoData();
+    const secondOrgId = "01000000-0000-4000-8000-000000000099";
+    data.organizations.push({
+      id: secondOrgId,
+      name: "Second Tuition Center",
+      slug: "second-tuition-center",
+      status: "active",
+      metadata: {},
+      created_at: "2026-05-17T00:00:00.000Z",
+      updated_at: "2026-05-17T00:00:00.000Z"
+    });
+    data.organizationMemberships.push({
+      organization_id: secondOrgId,
+      user_id: demoIds.student,
+      role: "student",
+      status: "active",
+      created_at: "2026-05-17T00:00:00.000Z",
+      updated_at: "2026-05-17T00:00:00.000Z"
+    });
+
+    await expect(
+      canAccessResource({
+        userId: demoIds.student,
+        resourceType: "year",
+        resourceId: demoIds.year,
+        permission: "view",
+        organizationId: secondOrgId,
+        now
+      }, data)
+    ).resolves.toBe(false);
+  });
+
   it("returns deterministic accessible ids and tree", async () => {
     const data = cloneDemoData();
     await expect(getAccessibleResourceIds({ userId: demoIds.student, resourceType: "recording", permission: "view", now }, data)).resolves.toEqual([

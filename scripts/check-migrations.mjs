@@ -10,6 +10,8 @@ if (files.length === 0) {
 
 const sql = files.map((file) => readFileSync(join(migrationDir, file), "utf8")).join("\n");
 const requiredTables = [
+  "organizations",
+  "organization_memberships",
   "profiles",
   "roles",
   "user_roles",

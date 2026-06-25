@@ -8,6 +8,7 @@ import { demoUserCookie, requireAuth } from "@/lib/auth/session";
 import { getAuthenticatedHomePath } from "@/lib/auth/redirects";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getDefaultOrganizationForUser, getUserOrganizationMemberships } from "@/lib/tenancy/server";
 import { forgotPasswordSchema, loginSchema, ownPasswordSchema, ownProfileSchema, resetPasswordSchema } from "@/features/auth/validation";
 import { logActivityEvent } from "@/lib/activity/log";
 import { logAudit } from "@/lib/audit/log";
@@ -42,7 +43,8 @@ export async function loginAction(formData: FormData) {
     const roles = cloneDemoData()
       .userRoles.filter((role) => role.user_id === profile.id)
       .map((role) => role.role);
-    redirect(getAuthenticatedHomePath(profile, roles));
+    const organization = await getDefaultOrganizationForUser(profile.id);
+    redirect(getAuthenticatedHomePath(profile, roles, organization?.slug));
   }
 
   if (!isSupabaseConfigured()) {
@@ -81,8 +83,15 @@ export async function loginAction(formData: FormData) {
         return Array.isArray(roleRecord) ? roleRecord[0]?.name : roleRecord?.name;
       })
       .filter((role): role is "student" | "teacher" | "admin" | "super_admin" => Boolean(role)) ?? [];
+  const memberships = await getUserOrganizationMemberships(userId);
+  for (const membership of memberships) {
+    if (membership.role === "owner" || membership.role === "admin") roleNames.push("admin");
+    if (membership.role === "teacher") roleNames.push("teacher");
+    if (membership.role === "student") roleNames.push("student");
+  }
 
-  redirect(getAuthenticatedHomePath({ must_change_password: profile?.must_change_password ?? false }, roleNames));
+  const organization = await getDefaultOrganizationForUser(userId);
+  redirect(getAuthenticatedHomePath({ must_change_password: profile?.must_change_password ?? false }, [...new Set(roleNames)], organization?.slug));
 }
 
 export async function logoutAction() {

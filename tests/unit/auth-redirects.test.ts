@@ -13,4 +13,13 @@ describe("authenticated home redirect", () => {
   it("sends admins to the admin area", () => {
     expect(getAuthenticatedHomePath({ must_change_password: false }, ["admin"])).toBe("/admin");
   });
+
+  it("uses tenant routes when an organization slug is provided", () => {
+    expect(getAuthenticatedHomePath({ must_change_password: false }, ["admin"], "legacy-tuition-center")).toBe(
+      "/o/legacy-tuition-center/admin"
+    );
+    expect(getAuthenticatedHomePath({ must_change_password: false }, ["student"], "legacy-tuition-center")).toBe(
+      "/o/legacy-tuition-center/dashboard"
+    );
+  });
 });

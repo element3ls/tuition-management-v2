@@ -28,6 +28,7 @@ type CanAccessParams = {
   resourceType: ResourceType;
   resourceId: string;
   permission: PermissionLevel;
+  organizationId?: string;
   now?: Date;
 };
 
@@ -35,6 +36,7 @@ type AccessibleIdsParams = {
   userId: string;
   resourceType: ResourceType;
   permission: PermissionLevel;
+  organizationId?: string;
   now?: Date;
 };
 
@@ -49,8 +51,23 @@ function getUserRoles(userId: string, data: AppData): RoleName[] {
     .sort();
 }
 
-export function canAccessAdmin(userId: string, data?: AppData) {
-  return hasAnyRole(getUserRoles(userId, getData(data)), adminRoles);
+function activeOrganizationRole(userId: string, organizationId: string, data: AppData) {
+  return data.organizationMemberships.find(
+    (membership) =>
+      membership.user_id === userId &&
+      membership.organization_id === organizationId &&
+      membership.status === "active"
+  )?.role;
+}
+
+export function canAccessAdmin(userId: string, data?: AppData, organizationId?: string) {
+  const resolvedData = getData(data);
+  if (organizationId) {
+    const role = activeOrganizationRole(userId, organizationId, resolvedData);
+    if (role === "owner" || role === "admin" || role === "teacher") return true;
+  }
+
+  return hasAnyRole(getUserRoles(userId, resolvedData), adminRoles);
 }
 
 function getResource(data: AppData, resourceType: ResourceType, resourceId: string): ResourceRecord | null {
@@ -93,6 +110,10 @@ function getResourceList(data: AppData, resourceType: ResourceType): ResourceRec
 
 function isPublished(record: ResourceRecord | null) {
   return record?.status === "published";
+}
+
+function organizationMatches(record: { organization_id?: string } | null, organizationId?: string) {
+  return !organizationId || record?.organization_id === organizationId;
 }
 
 function parentRefs(data: AppData, resourceType: ResourceType, resourceId: string): ResourceRef[] {
@@ -169,12 +190,17 @@ function isActiveWindow(startsAt: string | null, expiresAt: string | null, now: 
   return true;
 }
 
-function activeGroupIdsForUser(userId: string, data: AppData, now: Date) {
+function activeGroupIdsForUser(userId: string, data: AppData, now: Date, organizationId?: string) {
   return data.memberships
+    .filter((membership) => organizationMatches(membership, organizationId))
     .filter((membership) => membership.student_id === userId)
     .filter((membership) => membership.status === "active")
     .filter((membership) => isActiveWindow(membership.starts_at, membership.expires_at, now))
-    .filter((membership) => data.groups.some((group) => group.id === membership.group_id && group.is_active))
+    .filter((membership) =>
+      data.groups.some(
+        (group) => group.id === membership.group_id && group.is_active && organizationMatches(group, organizationId)
+      )
+    )
     .map((membership) => membership.group_id)
     .sort();
 }
@@ -193,10 +219,11 @@ function grantTargetsResource(grant: AccessGrant, refs: ResourceRef[]) {
   return refs.some((ref) => ref.resourceType === grant.resource_type && ref.resourceId === grant.resource_id);
 }
 
-function activeGrantsForUser(userId: string, data: AppData, now: Date) {
-  const groupIds = activeGroupIdsForUser(userId, data, now);
+function activeGrantsForUser(userId: string, data: AppData, now: Date, organizationId?: string) {
+  const groupIds = activeGroupIdsForUser(userId, data, now, organizationId);
 
   return data.accessGrants
+    .filter((grant) => organizationMatches(grant, organizationId))
     .filter((grant) => grant.revoked_at === null)
     .filter((grant) => isActiveWindow(grant.starts_at, grant.expires_at, now))
     .filter((grant) => grantBelongsToUser(grant, userId, groupIds));
@@ -205,8 +232,17 @@ function activeGrantsForUser(userId: string, data: AppData, now: Date) {
 export async function canAccessResource(params: CanAccessParams, data?: AppData): Promise<boolean> {
   const resolvedData = getData(data);
   const now = params.now ?? new Date();
+  const organizationId = params.organizationId;
 
   if (!resolvedData.profiles.some((profile) => profile.id === params.userId && profile.is_active)) {
+    return false;
+  }
+
+  if (organizationId && !activeOrganizationRole(params.userId, organizationId, resolvedData)) {
+    return false;
+  }
+
+  if (!organizationMatches(getResource(resolvedData, params.resourceType, params.resourceId), organizationId)) {
     return false;
   }
 
@@ -216,7 +252,7 @@ export async function canAccessResource(params: CanAccessParams, data?: AppData)
 
   const refs = resourceAndAncestors(resolvedData, params.resourceType, params.resourceId);
 
-  return activeGrantsForUser(params.userId, resolvedData, now).some(
+  return activeGrantsForUser(params.userId, resolvedData, now, organizationId).some(
     (grant) => grantPermissionMatches(grant, params.permission) && grantTargetsResource(grant, refs)
   );
 }
@@ -234,6 +270,7 @@ export async function getAccessibleResourceIds(params: AccessibleIdsParams, data
           resourceType: params.resourceType,
           resourceId: resource.id,
           permission: params.permission,
+          organizationId: params.organizationId,
           now: params.now
         },
         resolvedData
@@ -248,15 +285,25 @@ export async function getAccessibleResourceIds(params: AccessibleIdsParams, data
 
 export async function getAccessibleContentTree(userId: string, data?: AppData) {
   const resolvedData = getData(data);
-  const accessibleSubjects = new Set(await getAccessibleResourceIds({ userId, resourceType: "subject", permission: "view" }, resolvedData));
-  const accessibleChapters = new Set(await getAccessibleResourceIds({ userId, resourceType: "chapter", permission: "view" }, resolvedData));
-  const accessibleQuestions = new Set(await getAccessibleResourceIds({ userId, resourceType: "question", permission: "view" }, resolvedData));
-  const accessibleRecordings = new Set(await getAccessibleResourceIds({ userId, resourceType: "recording", permission: "view" }, resolvedData));
+  const organizationId = resolvedData.organizations[0]?.id;
+  const accessibleSubjects = new Set(
+    await getAccessibleResourceIds({ userId, resourceType: "subject", permission: "view", organizationId }, resolvedData)
+  );
+  const accessibleChapters = new Set(
+    await getAccessibleResourceIds({ userId, resourceType: "chapter", permission: "view", organizationId }, resolvedData)
+  );
+  const accessibleQuestions = new Set(
+    await getAccessibleResourceIds({ userId, resourceType: "question", permission: "view", organizationId }, resolvedData)
+  );
+  const accessibleRecordings = new Set(
+    await getAccessibleResourceIds({ userId, resourceType: "recording", permission: "view", organizationId }, resolvedData)
+  );
   const accessibleMaterials = new Set(
-    await getAccessibleResourceIds({ userId, resourceType: "solution_material", permission: "view" }, resolvedData)
+    await getAccessibleResourceIds({ userId, resourceType: "solution_material", permission: "view", organizationId }, resolvedData)
   );
 
   const years = resolvedData.years
+    .filter((year) => organizationMatches(year, organizationId))
     .filter((year) => year.status === "published")
     .map((year) => ({
       ...year,
