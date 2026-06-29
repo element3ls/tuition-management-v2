@@ -65,6 +65,8 @@ async function applySqlFile(client, file) {
 }
 
 async function seedPublicData(client, ids) {
+  const organizationId = "01000000-0000-4000-8000-000000000001";
+
   await client.query(`
     insert into public.roles (name, description)
     values
@@ -173,10 +175,11 @@ async function seedPublicData(client, ids) {
   await client.query(
     `
     insert into public.exams (
-      id, subject_id, title, description, source_bucket, source_key, source_file_name, source_mime_type,
+      organization_id, id, subject_id, title, description, source_bucket, source_key, source_file_name, source_mime_type,
       source_size_bytes, intake_mode, status, processing_status, ai_model, uploaded_by, approved_by, approved_at, published_at
     )
     values (
+      $2,
       '72000000-0000-4000-8000-000000000001',
       '30000000-0000-4000-8000-000000000001',
       'Linear Equations Practice Exam',
@@ -205,17 +208,28 @@ async function seedPublicData(client, ids) {
         approved_by = excluded.approved_by,
         approved_at = excluded.approved_at,
         published_at = excluded.published_at;
+  `,
+    [ids.adminId, organizationId]
+  );
 
-    insert into public.exam_chapters (exam_id, chapter_id)
-    values ('72000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001')
+  await client.query(
+    `
+    insert into public.exam_chapters (organization_id, exam_id, chapter_id)
+    values ($1, '72000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001')
     on conflict (exam_id, chapter_id) do nothing;
+  `,
+    [organizationId]
+  );
 
+  await client.query(
+    `
     insert into public.exam_questions (
-      id, exam_id, question_number, question_text, answer_text, question_format, answer_format,
+      organization_id, id, exam_id, question_number, question_text, answer_text, question_format, answer_format,
       marks, source_pages, requires_visual, visual_not_needed, sort_order
     )
     values
       (
+        $1,
         '73000000-0000-4000-8000-000000000001',
         '72000000-0000-4000-8000-000000000001',
         '1',
@@ -230,6 +244,7 @@ async function seedPublicData(client, ids) {
         1
       ),
       (
+        $1,
         '73000000-0000-4000-8000-000000000002',
         '72000000-0000-4000-8000-000000000001',
         '2',
@@ -254,12 +269,18 @@ async function seedPublicData(client, ids) {
         requires_visual = excluded.requires_visual,
         visual_not_needed = excluded.visual_not_needed,
         sort_order = excluded.sort_order;
+  `,
+    [organizationId]
+  );
 
+  await client.query(
+    `
     insert into public.exam_assets (
-      exam_id, role, variant, storage_bucket, storage_key, file_name, mime_type, size_bytes,
+      organization_id, exam_id, role, variant, storage_bucket, storage_key, file_name, mime_type, size_bytes,
       upload_status, student_visible, uploaded_by
     )
     values (
+      $2,
       '72000000-0000-4000-8000-000000000001',
       'source_pdf',
       'raw',
@@ -274,11 +295,17 @@ async function seedPublicData(client, ids) {
     )
     on conflict (storage_bucket, storage_key) do update
     set upload_status = excluded.upload_status;
+  `,
+    [ids.adminId, organizationId]
+  );
 
+  await client.query(
+    `
     insert into public.exam_processing_runs (
-      id, exam_id, mode, status, model, response_id, started_by, started_at, completed_at
+      organization_id, id, exam_id, mode, status, model, response_id, started_by, started_at, completed_at
     )
     values (
+      $2,
       '75000000-0000-4000-8000-000000000001',
       '72000000-0000-4000-8000-000000000001',
       'ai_solved',
@@ -294,16 +321,16 @@ async function seedPublicData(client, ids) {
         model = excluded.model,
         completed_at = excluded.completed_at;
   `,
-    [ids.adminId]
+    [ids.adminId, organizationId]
   );
 
   await client.query(
     `
-    insert into public.access_grants (id, grantee_type, grantee_id, resource_type, resource_id, permission, starts_at, expires_at, granted_by)
-    values ('80000000-0000-4000-8000-000000000001', 'group', '10000000-0000-4000-8000-000000000001', 'year', '20000000-0000-4000-8000-000000000001', 'download', now() - interval '1 day', null, $1)
+    insert into public.access_grants (organization_id, id, grantee_type, grantee_id, resource_type, resource_id, permission, starts_at, expires_at, granted_by)
+    values ($2, '80000000-0000-4000-8000-000000000001', 'group', '10000000-0000-4000-8000-000000000001', 'year', '20000000-0000-4000-8000-000000000001', 'download', now() - interval '1 day', '2099-12-31T23:59:59Z', $1)
     on conflict (id) do update set permission = excluded.permission, revoked_at = null, revoked_by = null;
   `,
-    [ids.adminId]
+    [ids.adminId, organizationId]
   );
 
   await client.query(`

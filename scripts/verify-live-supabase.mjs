@@ -62,7 +62,11 @@ try {
       (select count(*)::int from public.roles) as roles,
       (select count(*)::int from public.profiles where email in ('student@example.com', 'admin@example.com')) as profiles,
       (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'must_change_password') as must_change_password_columns,
+      (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'organizations') as organization_tables,
+      (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'organization_memberships') as organization_membership_tables,
+      (select count(*)::int from public.organizations where status = 'active') as active_organizations,
       (select count(*)::int from public.student_profiles) as student_profiles,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'student_profiles' and column_name = 'organization_id') as student_profile_organization_columns,
       (select count(*)::int from public.content_groups) as groups,
       (select count(*)::int from public.student_group_memberships where status = 'active') as active_memberships,
       (select count(*)::int from public.years where status = 'published') as published_years,
@@ -82,7 +86,12 @@ try {
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exam_assets') as exam_asset_tables,
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exam_processing_runs') as exam_processing_run_tables,
       (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exams' and column_name = 'intake_mode') as exam_intake_mode_columns,
-      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exams' and column_name = 'processing_status') as exam_processing_status_columns;
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exams' and column_name = 'processing_status') as exam_processing_status_columns,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exams' and column_name = 'organization_id') as exam_organization_columns,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exam_assets' and column_name = 'organization_id') as exam_asset_organization_columns,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'audit_logs' and column_name = 'organization_id') as audit_log_organization_columns,
+      (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'ai_usage_events') as ai_usage_event_tables,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'ai_usage_events' and column_name = 'organization_id') as ai_usage_event_organization_columns;
   `);
 
   const counts = rows[0];
