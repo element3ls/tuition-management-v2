@@ -91,7 +91,55 @@ try {
       (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exam_assets' and column_name = 'organization_id') as exam_asset_organization_columns,
       (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'audit_logs' and column_name = 'organization_id') as audit_log_organization_columns,
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'ai_usage_events') as ai_usage_event_tables,
-      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'ai_usage_events' and column_name = 'organization_id') as ai_usage_event_organization_columns;
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'ai_usage_events' and column_name = 'organization_id') as ai_usage_event_organization_columns,
+      (
+        select case when count(*) = 14 then 1 else 0 end
+        from pg_constraint
+        where connamespace = 'public'::regnamespace
+          and conname = any(array[
+            'student_group_memberships_org_student_fkey',
+            'student_group_memberships_org_group_fkey',
+            'subjects_org_year_fkey',
+            'chapters_org_subject_fkey',
+            'questions_org_chapter_fkey',
+            'recordings_org_chapter_fkey',
+            'solution_materials_org_chapter_fkey',
+            'exams_org_subject_fkey',
+            'exam_chapters_org_exam_fkey',
+            'exam_chapters_org_chapter_fkey',
+            'exam_questions_org_exam_fkey',
+            'exam_assets_org_exam_fkey',
+            'exam_processing_runs_org_exam_fkey',
+            'content_tags_org_tag_fkey'
+          ])
+      ) as tenant_consistency_foreign_keys,
+      (
+        select case when count(*) = 6 then 1 else 0 end
+        from pg_proc procedure_record
+        join pg_namespace namespace_record on namespace_record.oid = procedure_record.pronamespace
+        where namespace_record.nspname = 'public'
+          and procedure_record.proname = any(array[
+            'ensure_recording_question_tenant_consistency',
+            'ensure_solution_material_question_tenant_consistency',
+            'ensure_exam_asset_question_tenant_consistency',
+            'ensure_ai_usage_event_tenant_consistency',
+            'ensure_content_tag_resource_tenant_consistency',
+            'ensure_access_grant_tenant_consistency'
+          ])
+      ) as tenant_consistency_functions,
+      (
+        select case when count(*) = 6 then 1 else 0 end
+        from pg_trigger
+        where not tgisinternal
+          and tgname = any(array[
+            'ensure_recordings_question_tenant_consistency',
+            'ensure_solution_materials_question_tenant_consistency',
+            'ensure_exam_assets_question_tenant_consistency',
+            'ensure_ai_usage_events_tenant_consistency',
+            'ensure_content_tags_resource_tenant_consistency',
+            'ensure_access_grants_tenant_consistency'
+          ])
+      ) as tenant_consistency_triggers;
   `);
 
   const counts = rows[0];
