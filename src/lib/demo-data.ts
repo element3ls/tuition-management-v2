@@ -17,6 +17,11 @@ export const demoIds = {
   exam: "72000000-0000-4000-8000-000000000001"
 } as const;
 
+const demoStorageKeys = {
+  solution: `organizations/${demoIds.organization}/materials/demo/linear-equations-solution.pdf`,
+  examSource: `organizations/${demoIds.organization}/exams/${demoIds.exam}/raw/demo/linear-equations-exam.pdf`
+} as const;
+
 export const demoData: AppData = {
   organizations: [
     {
@@ -218,7 +223,7 @@ export const demoData: AppData = {
       title: "Linear Equations Solution Sheet",
       description: "PDF solution notes for the demo question.",
       storage_bucket: "solution-materials",
-      file_key: "demo/linear-equations-solution.pdf",
+      file_key: demoStorageKeys.solution,
       file_name: "linear-equations-solution.pdf",
       mime_type: "application/pdf",
       file_size_bytes: 24576,
@@ -238,7 +243,7 @@ export const demoData: AppData = {
       title: "Linear Equations Practice Exam",
       description: "Reviewed questions and worked answers.",
       source_bucket: "exam-sources",
-      source_key: "demo/linear-equations-exam.pdf",
+      source_key: demoStorageKeys.examSource,
       source_file_name: "linear-equations-exam.pdf",
       source_mime_type: "application/pdf",
       source_size_bytes: 32768,
@@ -318,7 +323,7 @@ export const demoData: AppData = {
       variant: "raw",
       original_asset_id: null,
       storage_bucket: "exam-sources",
-      storage_key: "demo/linear-equations-exam.pdf",
+      storage_key: demoStorageKeys.examSource,
       file_name: "linear-equations-exam.pdf",
       mime_type: "application/pdf",
       size_bytes: 32768,

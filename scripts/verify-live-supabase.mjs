@@ -79,6 +79,43 @@ try {
       (select count(*)::int from storage.buckets where id = 'solution-materials' and public = false) as private_solution_buckets,
       (select count(*)::int from storage.buckets where id = 'exam-sources' and public = false) as private_exam_buckets,
       (select count(*)::int from storage.buckets where id = 'exam-assets' and public = false) as private_exam_asset_buckets,
+      (
+        select case when count(*) = 1 then 1 else 0 end
+        from pg_proc procedure_record
+        join pg_namespace namespace_record on namespace_record.oid = procedure_record.pronamespace
+        where namespace_record.nspname = 'public'
+          and procedure_record.proname = 'storage_key_has_organization_prefix'
+      ) as storage_key_prefix_functions,
+      (
+        select case when count(*) = 3 then 1 else 0 end
+        from pg_constraint
+        where connamespace = 'public'::regnamespace
+          and conname = any(array[
+            'solution_materials_storage_key_org_prefix_check',
+            'exams_source_key_org_prefix_check',
+            'exam_assets_storage_key_org_prefix_check'
+          ])
+      ) as storage_key_prefix_constraints,
+      (
+        select case when not exists (
+          select 1
+          from public.solution_materials material
+          where material.storage_bucket = 'solution-materials'
+            and not public.storage_key_has_organization_prefix(material.organization_id, material.file_key, 'materials')
+        )
+        and not exists (
+          select 1
+          from public.exams exam
+          where exam.source_key is not null
+            and not public.storage_key_has_organization_prefix(exam.organization_id, exam.source_key, 'exams')
+        )
+        and not exists (
+          select 1
+          from public.exam_assets asset
+          where not public.storage_key_has_organization_prefix(asset.organization_id, asset.storage_key, 'exams')
+        )
+        then 1 else 0 end
+      ) as storage_key_prefix_integrity,
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exams') as exam_tables,
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'exam_chapters') as exam_chapter_tables,
       (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'exams' and column_name = 'subject_id') as exam_subject_columns,
@@ -205,7 +242,10 @@ try {
 
   const { data: signedUrlData, error: signedUrlError } = await supabase.storage
     .from("solution-materials")
-    .createSignedUrl("demo/linear-equations-solution.pdf", 60);
+    .createSignedUrl(
+      "organizations/01000000-0000-4000-8000-000000000001/materials/demo/linear-equations-solution.pdf",
+      60
+    );
   if (signedUrlError || !signedUrlData?.signedUrl) throw signedUrlError ?? new Error("Signed URL creation failed.");
 
   console.log(

@@ -31,6 +31,14 @@ function tempPassword() {
   return `Tms-${crypto.randomBytes(12).toString("base64url")}!9a`;
 }
 
+function demoStorageKeys(organizationId) {
+  const examId = "72000000-0000-4000-8000-000000000001";
+  return {
+    solution: `organizations/${organizationId}/materials/demo/linear-equations-solution.pdf`,
+    examSource: `organizations/${organizationId}/exams/${examId}/raw/demo/linear-equations-exam.pdf`
+  };
+}
+
 async function findUserByEmail(supabase, email) {
   for (let page = 1; page <= 20; page += 1) {
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
@@ -66,6 +74,7 @@ async function applySqlFile(client, file) {
 
 async function seedPublicData(client, ids) {
   const organizationId = "01000000-0000-4000-8000-000000000001";
+  const storageKeys = demoStorageKeys(organizationId);
 
   await client.query(`
     insert into public.roles (name, description)
@@ -166,10 +175,14 @@ async function seedPublicData(client, ids) {
   await client.query(
     `
     insert into public.solution_materials (id, chapter_id, question_id, title, description, storage_bucket, file_key, file_name, mime_type, file_size_bytes, is_downloadable, status, is_ai_indexable, uploaded_by)
-    values ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001', 'Linear Equations Solution Sheet', 'PDF solution notes for the demo question.', 'solution-materials', 'demo/linear-equations-solution.pdf', 'linear-equations-solution.pdf', 'application/pdf', 24576, true, 'published', true, $1)
-    on conflict (id) do update set title = excluded.title, description = excluded.description, status = excluded.status;
+    values ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001', 'Linear Equations Solution Sheet', 'PDF solution notes for the demo question.', 'solution-materials', $2, 'linear-equations-solution.pdf', 'application/pdf', 24576, true, 'published', true, $1)
+    on conflict (id) do update
+    set title = excluded.title,
+        description = excluded.description,
+        file_key = excluded.file_key,
+        status = excluded.status;
   `,
-    [ids.adminId]
+    [ids.adminId, storageKeys.solution]
   );
 
   await client.query(
@@ -185,7 +198,7 @@ async function seedPublicData(client, ids) {
       'Linear Equations Practice Exam',
       'Reviewed questions and worked answers.',
       'exam-sources',
-      'demo/linear-equations-exam.pdf',
+      $3,
       'linear-equations-exam.pdf',
       'application/pdf',
       32768,
@@ -205,11 +218,12 @@ async function seedPublicData(client, ids) {
         intake_mode = excluded.intake_mode,
         status = excluded.status,
         processing_status = excluded.processing_status,
+        source_key = excluded.source_key,
         approved_by = excluded.approved_by,
         approved_at = excluded.approved_at,
         published_at = excluded.published_at;
   `,
-    [ids.adminId, organizationId]
+    [ids.adminId, organizationId, storageKeys.examSource]
   );
 
   await client.query(
@@ -285,7 +299,7 @@ async function seedPublicData(client, ids) {
       'source_pdf',
       'raw',
       'exam-sources',
-      'demo/linear-equations-exam.pdf',
+      $3,
       'linear-equations-exam.pdf',
       'application/pdf',
       32768,
@@ -296,7 +310,7 @@ async function seedPublicData(client, ids) {
     on conflict (storage_bucket, storage_key) do update
     set upload_status = excluded.upload_status;
   `,
-    [ids.adminId, organizationId]
+    [ids.adminId, organizationId, storageKeys.examSource]
   );
 
   await client.query(
@@ -371,7 +385,8 @@ async function verify(client) {
   return rows[0];
 }
 
-async function uploadDemoFiles(supabase) {
+async function uploadDemoFiles(supabase, organizationId) {
+  const storageKeys = demoStorageKeys(organizationId);
   const pdf = Buffer.from(
     [
       "%PDF-1.4",
@@ -395,17 +410,120 @@ async function uploadDemoFiles(supabase) {
     ].join("\n")
   );
 
-  const { error } = await supabase.storage.from("solution-materials").upload("demo/linear-equations-solution.pdf", pdf, {
+  const { error } = await supabase.storage.from("solution-materials").upload(storageKeys.solution, pdf, {
     contentType: "application/pdf",
     upsert: true
   });
   if (error) throw error;
-  const { error: examError } = await supabase.storage.from("exam-sources").upload("demo/linear-equations-exam.pdf", pdf, {
+  const { error: examError } = await supabase.storage.from("exam-sources").upload(storageKeys.examSource, pdf, {
     contentType: "application/pdf",
     upsert: true
   });
   if (examError) throw examError;
   console.log("Uploaded demo solution and exam files");
+}
+
+function tenantMaterialStorageKey(organizationId, storageKey) {
+  const prefix = `organizations/${organizationId}/materials/`;
+  return storageKey.startsWith(prefix) ? storageKey : `${prefix}${storageKey}`;
+}
+
+function tenantExamStorageKey(organizationId, examId, storageKey) {
+  const prefix = `organizations/${organizationId}/exams/`;
+  if (storageKey.startsWith(prefix)) return storageKey;
+  if (storageKey === "demo/linear-equations-exam.pdf") return `${prefix}${examId}/raw/${storageKey}`;
+  if (storageKey.startsWith("exams/")) return `${prefix}${storageKey.slice("exams/".length)}`;
+  return `${prefix}${storageKey}`;
+}
+
+function addStorageMove(moves, bucket, sourceKey, targetKey) {
+  if (!bucket || !sourceKey || sourceKey === targetKey) return;
+  const key = `${bucket}\n${sourceKey}`;
+  const existing = moves.get(key);
+  if (existing && existing.targetKey !== targetKey) {
+    throw new Error(`Conflicting storage move targets for ${bucket}/${sourceKey}.`);
+  }
+  moves.set(key, { bucket, sourceKey, targetKey });
+}
+
+async function storageObjectExists(supabase, bucket, storageKey) {
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(storageKey, 60);
+  return !error && Boolean(data?.signedUrl);
+}
+
+async function moveStorageObject(supabase, move) {
+  const { bucket, sourceKey, targetKey } = move;
+  const { error } = await supabase.storage.from(bucket).move(sourceKey, targetKey);
+  if (!error) return;
+
+  if (await storageObjectExists(supabase, bucket, targetKey)) {
+    console.log(`Storage object already exists at ${bucket}/${targetKey}`);
+    return;
+  }
+
+  if (error.message.toLowerCase().includes("object not found")) {
+    console.warn(`Legacy storage object missing at ${bucket}/${sourceKey}; metadata will still be tenant-prefixed.`);
+    return;
+  }
+
+  throw new Error(`Could not move ${bucket}/${sourceKey} to ${targetKey}: ${error.message}`);
+}
+
+async function migrateLegacyTenantStorageObjects(client, supabase) {
+  const moves = new Map();
+
+  const { rows: materials } = await client.query(`
+    select organization_id, storage_bucket, file_key
+    from public.solution_materials
+    where storage_bucket = 'solution-materials'
+      and file_key not like 'organizations/' || organization_id::text || '/materials/%'
+  `);
+  for (const material of materials) {
+    addStorageMove(
+      moves,
+      material.storage_bucket,
+      material.file_key,
+      tenantMaterialStorageKey(material.organization_id, material.file_key)
+    );
+  }
+
+  const { rows: exams } = await client.query(`
+    select id, organization_id, source_bucket, source_key
+    from public.exams
+    where source_bucket is not null
+      and source_key is not null
+      and source_key not like 'organizations/' || organization_id::text || '/exams/%'
+  `);
+  for (const exam of exams) {
+    addStorageMove(
+      moves,
+      exam.source_bucket,
+      exam.source_key,
+      tenantExamStorageKey(exam.organization_id, exam.id, exam.source_key)
+    );
+  }
+
+  const { rows: assets } = await client.query(`
+    select organization_id, exam_id, storage_bucket, storage_key
+    from public.exam_assets
+    where storage_key not like 'organizations/' || organization_id::text || '/exams/%'
+  `);
+  for (const asset of assets) {
+    addStorageMove(
+      moves,
+      asset.storage_bucket,
+      asset.storage_key,
+      tenantExamStorageKey(asset.organization_id, asset.exam_id, asset.storage_key)
+    );
+  }
+
+  for (const move of moves.values()) {
+    await moveStorageObject(supabase, move);
+  }
+
+  if (moves.size > 0) {
+    console.log(`Moved ${moves.size} legacy storage object(s) to tenant-prefixed keys`);
+  }
 }
 
 loadEnvFile(".env.local");
@@ -436,6 +554,9 @@ try {
     .sort();
 
   for (const migration of migrations) {
+    if (migration === "0013_tenant_storage_key_constraints.sql") {
+      await migrateLegacyTenantStorageObjects(client, supabase);
+    }
     await applySqlFile(client, join(migrationDir, migration));
     console.log(`Applied ${migration}`);
   }
@@ -445,7 +566,7 @@ try {
 
   await seedPublicData(client, { studentId: student.id, adminId: admin.id });
   console.log("Seeded public data");
-  await uploadDemoFiles(supabase);
+  await uploadDemoFiles(supabase, "01000000-0000-4000-8000-000000000001");
 
   if (credentials.length > 0) {
     mkdirSync(".supabase", { recursive: true });

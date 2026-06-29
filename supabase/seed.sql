@@ -100,8 +100,12 @@ values ('60000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-0000000
 on conflict (id) do update set title = excluded.title, description = excluded.description, status = excluded.status;
 
 insert into public.solution_materials (id, chapter_id, question_id, title, description, storage_bucket, file_key, file_name, mime_type, file_size_bytes, is_downloadable, status, is_ai_indexable, uploaded_by)
-values ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001', 'Linear Equations Solution Sheet', 'PDF solution notes for the demo question.', 'solution-materials', 'demo/linear-equations-solution.pdf', 'linear-equations-solution.pdf', 'application/pdf', 24576, true, 'published', true, '00000000-0000-4000-8000-000000000002')
-on conflict (id) do update set title = excluded.title, description = excluded.description, status = excluded.status;
+values ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001', 'Linear Equations Solution Sheet', 'PDF solution notes for the demo question.', 'solution-materials', 'organizations/01000000-0000-4000-8000-000000000001/materials/demo/linear-equations-solution.pdf', 'linear-equations-solution.pdf', 'application/pdf', 24576, true, 'published', true, '00000000-0000-4000-8000-000000000002')
+on conflict (id) do update
+set title = excluded.title,
+    description = excluded.description,
+    file_key = excluded.file_key,
+    status = excluded.status;
 
 insert into public.exams (
   id, subject_id, title, description, source_bucket, source_key, source_file_name, source_mime_type,
@@ -113,7 +117,7 @@ values (
   'Linear Equations Practice Exam',
   'Reviewed questions and worked answers.',
   'exam-sources',
-  'demo/linear-equations-exam.pdf',
+  'organizations/01000000-0000-4000-8000-000000000001/exams/72000000-0000-4000-8000-000000000001/raw/demo/linear-equations-exam.pdf',
   'linear-equations-exam.pdf',
   'application/pdf',
   32768,
@@ -133,6 +137,7 @@ set title = excluded.title,
     intake_mode = excluded.intake_mode,
     status = excluded.status,
     processing_status = excluded.processing_status,
+    source_key = excluded.source_key,
     approved_by = excluded.approved_by,
     approved_at = excluded.approved_at,
     published_at = excluded.published_at;
@@ -199,7 +204,7 @@ values (
   'source_pdf',
   'raw',
   'exam-sources',
-  'demo/linear-equations-exam.pdf',
+  'organizations/01000000-0000-4000-8000-000000000001/exams/72000000-0000-4000-8000-000000000001/raw/demo/linear-equations-exam.pdf',
   'linear-equations-exam.pdf',
   'application/pdf',
   32768,

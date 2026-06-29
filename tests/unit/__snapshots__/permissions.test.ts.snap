@@ -25,7 +25,7 @@ exports[`permission resolver > returns deterministic accessible ids and tree 1`]
                   "chapter_id": "40000000-0000-4000-8000-000000000001",
                   "created_at": "2026-05-17T00:00:00.000Z",
                   "description": "PDF solution notes for the demo question.",
-                  "file_key": "demo/linear-equations-solution.pdf",
+                  "file_key": "organizations/01000000-0000-4000-8000-000000000001/materials/demo/linear-equations-solution.pdf",
                   "file_name": "linear-equations-solution.pdf",
                   "file_size_bytes": 24576,
                   "id": "70000000-0000-4000-8000-000000000001",
