@@ -139,7 +139,52 @@ try {
             'ensure_content_tags_resource_tenant_consistency',
             'ensure_access_grants_tenant_consistency'
           ])
-      ) as tenant_consistency_triggers;
+      ) as tenant_consistency_triggers,
+      (
+        select case when count(*) = 5 then 1 else 0 end
+        from pg_proc procedure_record
+        join pg_namespace namespace_record on namespace_record.oid = procedure_record.pronamespace
+        where namespace_record.nspname = 'public'
+          and procedure_record.proname = any(array[
+            'has_global_role',
+            'is_organization_member',
+            'has_tenant_role',
+            'can_read_tenant_staff_data',
+            'can_read_profile'
+          ])
+      ) as tenant_rls_helper_functions,
+      (
+        select case when count(*) = 25 then 1 else 0 end
+        from pg_policies
+        where schemaname = 'public'
+          and policyname = any(array[
+            'profiles_select_self_or_staff',
+            'roles_select_authenticated',
+            'user_roles_select_self_or_staff',
+            'organizations_select_member_or_super_admin',
+            'organization_memberships_select_self_or_staff',
+            'student_profiles_select_self_or_staff',
+            'student_group_memberships_select_self_or_staff',
+            'content_groups_select_tenant_staff',
+            'years_select_tenant_staff',
+            'subjects_select_tenant_staff',
+            'chapters_select_tenant_staff',
+            'questions_select_tenant_staff',
+            'recordings_select_tenant_staff',
+            'solution_materials_select_tenant_staff',
+            'exams_select_tenant_staff',
+            'exam_chapters_select_tenant_staff',
+            'exam_questions_select_tenant_staff',
+            'exam_assets_select_tenant_staff',
+            'exam_processing_runs_select_tenant_staff',
+            'ai_usage_events_select_tenant_staff',
+            'access_grants_select_tenant_staff',
+            'tags_select_tenant_staff',
+            'content_tags_select_tenant_staff',
+            'audit_logs_select_tenant_staff',
+            'activity_events_select_self_or_staff'
+          ])
+      ) as tenant_rls_select_policies;
   `);
 
   const counts = rows[0];
