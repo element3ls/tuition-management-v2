@@ -8,6 +8,7 @@ import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { logAudit } from "@/lib/audit/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateMaterialFile } from "@/lib/storage/materials";
+import { getCurrentOrganizationId } from "@/lib/tenancy/server";
 import {
   studentAccountInputSchema,
   studentImportBatchSize,
@@ -81,7 +82,9 @@ export async function createStudentAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
+  const organizationId = await getCurrentOrganizationId();
   const result = await createStudentAccount(parsed, {
+    organizationId,
     actorId: user.id,
     studentRoleId: await roleIdFor("student", supabase),
     supabase
@@ -149,6 +152,7 @@ export async function importStudentsBatchAction(rows: StudentImportRowInput[]) {
 
   ensureSupabaseReady();
   const supabase = createAdminClient();
+  const organizationId = await getCurrentOrganizationId();
   const studentRoleId = await roleIdFor("student", supabase);
   const emails = parsedRows.map((row) => row.email);
   const existingEmails = new Set<string>();
@@ -176,7 +180,7 @@ export async function importStudentsBatchAction(rows: StudentImportRowInput[]) {
         guardian_name: row.guardian_name,
         notes: ""
       },
-      { actorId: user.id, studentRoleId, supabase }
+      { organizationId, actorId: user.id, studentRoleId, supabase }
     );
 
     if (creation.status === "created") {
@@ -263,9 +267,21 @@ export async function updateStudentAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
+  const organizationId = await getCurrentOrganizationId();
+  const { data: tenantMembership } = await supabase
+    .from("organization_memberships")
+    .select("user_id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", parsed.user_id)
+    .eq("role", "student")
+    .eq("status", "active")
+    .maybeSingle();
+  if (!tenantMembership) {
+    redirect("/admin/users?error=Student%20not%20found");
+  }
   const [{ data: beforeProfile }, { data: beforeStudent }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", parsed.user_id).single(),
-    supabase.from("student_profiles").select("*").eq("user_id", parsed.user_id).single()
+    supabase.from("student_profiles").select("*").eq("organization_id", organizationId).eq("user_id", parsed.user_id).single()
   ]);
   const authUpdate = await supabase.auth.admin.updateUserById(parsed.user_id, {
     email: parsed.email,
@@ -280,6 +296,7 @@ export async function updateStudentAction(formData: FormData) {
   if (profileUpdate.error) throw new Error(profileUpdate.error.message);
 
   const studentPayload = {
+    organization_id: organizationId,
     user_id: parsed.user_id,
     guardian_name: parsed.guardian_name || null,
     phone: parsed.phone || null,
@@ -306,9 +323,11 @@ export async function createGroupAction(formData: FormData) {
   if (isDemoMode()) await demoRedirect("/admin/groups");
   ensureSupabaseReady();
   const supabase = createAdminClient();
-  const { data, error } = await supabase.from("content_groups").insert(parsed).select("id").single();
+  const organizationId = await getCurrentOrganizationId();
+  const payload = { ...parsed, organization_id: organizationId };
+  const { data, error } = await supabase.from("content_groups").insert(payload).select("id").single();
   if (error) throw new Error(error.message);
-  await logAudit({ actorId: user.id, action: "group_created", resourceType: "content_group", resourceId: data.id, afterData: parsed });
+  await logAudit({ actorId: user.id, action: "group_created", resourceType: "content_group", resourceId: data.id, afterData: payload });
   revalidatePath("/admin/groups");
   redirect("/admin/groups?success=Group%20created");
 }
@@ -336,8 +355,14 @@ export async function updateGroupAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: beforeData } = await supabase.from("content_groups").select("*").eq("id", parsed.group_id).single();
-  const { error } = await supabase.from("content_groups").update(payload).eq("id", parsed.group_id);
+  const organizationId = await getCurrentOrganizationId();
+  const { data: beforeData } = await supabase
+    .from("content_groups")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("id", parsed.group_id)
+    .single();
+  const { error } = await supabase.from("content_groups").update(payload).eq("organization_id", organizationId).eq("id", parsed.group_id);
   if (error) throw new Error(error.message);
   await logAudit({
     actorId: user.id,
@@ -357,7 +382,13 @@ export async function deactivateStudentAction(formData: FormData) {
   if (isDemoMode()) await demoRedirect("/admin/users");
   ensureSupabaseReady();
   const supabase = createAdminClient();
-  const { error } = await supabase.from("profiles").update({ is_active: false }).eq("id", userId);
+  const organizationId = await getCurrentOrganizationId();
+  const { error } = await supabase
+    .from("organization_memberships")
+    .update({ status: "inactive" })
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .eq("role", "student");
   if (error) throw new Error(error.message);
   await logAudit({ actorId: user.id, action: "user_deactivated", resourceType: "profile", resourceId: userId });
   revalidatePath("/admin/users");
@@ -371,7 +402,8 @@ export async function toggleGroupAction(formData: FormData) {
   if (isDemoMode()) await demoRedirect("/admin/groups");
   ensureSupabaseReady();
   const supabase = createAdminClient();
-  const { error } = await supabase.from("content_groups").update({ is_active: isActive }).eq("id", groupId);
+  const organizationId = await getCurrentOrganizationId();
+  const { error } = await supabase.from("content_groups").update({ is_active: isActive }).eq("organization_id", organizationId).eq("id", groupId);
   if (error) throw new Error(error.message);
   await logAudit({ actorId: user.id, action: "group_updated", resourceType: "content_group", resourceId: groupId, afterData: { is_active: isActive } });
   revalidatePath("/admin/groups");
@@ -391,8 +423,10 @@ export async function addStudentToGroupAction(formData: FormData) {
   if (isDemoMode()) await demoRedirect("/admin/groups");
   ensureSupabaseReady();
   const supabase = createAdminClient();
+  const organizationId = await getCurrentOrganizationId();
   await supabase.from("student_group_memberships").upsert(
     {
+      organization_id: organizationId,
       student_id: parsed.student_id,
       group_id: parsed.group_id,
       status: "active",
@@ -433,8 +467,18 @@ export async function updateMembershipAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: beforeData } = await supabase.from("student_group_memberships").select("*").eq("id", parsed.membership_id).single();
-  const { error } = await supabase.from("student_group_memberships").update(payload).eq("id", parsed.membership_id);
+  const organizationId = await getCurrentOrganizationId();
+  const { data: beforeData } = await supabase
+    .from("student_group_memberships")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("id", parsed.membership_id)
+    .single();
+  const { error } = await supabase
+    .from("student_group_memberships")
+    .update(payload)
+    .eq("organization_id", organizationId)
+    .eq("id", parsed.membership_id);
   if (error) throw new Error(error.message);
   await logAudit({
     actorId: user.id,
@@ -454,7 +498,13 @@ export async function removeStudentFromGroupAction(formData: FormData) {
   if (isDemoMode()) await demoRedirect("/admin/groups");
   ensureSupabaseReady();
   const supabase = createAdminClient();
-  await supabase.from("student_group_memberships").delete().eq("student_id", parsed.student_id).eq("group_id", parsed.group_id);
+  const organizationId = await getCurrentOrganizationId();
+  await supabase
+    .from("student_group_memberships")
+    .delete()
+    .eq("organization_id", organizationId)
+    .eq("student_id", parsed.student_id)
+    .eq("group_id", parsed.group_id);
   await logAudit({
     actorId: user.id,
     action: "student_removed_from_group",
@@ -482,8 +532,10 @@ export async function createAccessGrantAction(formData: FormData) {
   if (isDemoMode()) await demoRedirect("/admin/access");
   ensureSupabaseReady();
   const supabase = createAdminClient();
+  const organizationId = await getCurrentOrganizationId();
   const basePayload = {
     ...parsed,
+    organization_id: organizationId,
     starts_at: datetimeValue(formData, "starts_at"),
     expires_at: datetimeValue(formData, "expires_at"),
     granted_by: user.id
@@ -508,9 +560,11 @@ export async function revokeAccessGrantAction(formData: FormData) {
   if (isDemoMode()) await demoRedirect("/admin/access");
   ensureSupabaseReady();
   const supabase = createAdminClient();
+  const organizationId = await getCurrentOrganizationId();
   const { error } = await supabase
     .from("access_grants")
     .update({ revoked_at: new Date().toISOString(), revoked_by: user.id })
+    .eq("organization_id", organizationId)
     .eq("id", grantId);
   if (error) throw new Error(error.message);
   await logAudit({ actorId: user.id, action: "access_revoked", resourceType: "access_grant", resourceId: grantId });
@@ -520,7 +574,9 @@ export async function revokeAccessGrantAction(formData: FormData) {
 
 export async function createYearAction(formData: FormData) {
   const { user } = await requireAdminAccess();
+  const organizationId = await getCurrentOrganizationId();
   const payload = {
+    organization_id: organizationId,
     name: textValue(formData, "name"),
     description: nullableTextValue(formData, "description"),
     sort_order: Number(textValue(formData, "sort_order") || 0),
@@ -539,7 +595,9 @@ export async function createYearAction(formData: FormData) {
 
 export async function createSubjectAction(formData: FormData) {
   const { user } = await requireAdminAccess();
+  const organizationId = await getCurrentOrganizationId();
   const payload = {
+    organization_id: organizationId,
     year_id: textValue(formData, "year_id"),
     name: textValue(formData, "name"),
     description: nullableTextValue(formData, "description"),
@@ -559,7 +617,9 @@ export async function createSubjectAction(formData: FormData) {
 
 export async function createChapterAction(formData: FormData) {
   const { user } = await requireAdminAccess();
+  const organizationId = await getCurrentOrganizationId();
   const payload = {
+    organization_id: organizationId,
     subject_id: textValue(formData, "subject_id"),
     title: textValue(formData, "title"),
     description: nullableTextValue(formData, "description"),
@@ -579,7 +639,9 @@ export async function createChapterAction(formData: FormData) {
 
 export async function createQuestionAction(formData: FormData) {
   const { user } = await requireAdminAccess();
+  const organizationId = await getCurrentOrganizationId();
   const payload = {
+    organization_id: organizationId,
     chapter_id: textValue(formData, "chapter_id"),
     title: textValue(formData, "title"),
     question_text: textValue(formData, "question_text"),
@@ -607,7 +669,8 @@ export async function setContentStatusAction(formData: FormData) {
   ensureSupabaseReady();
   const table = resourceType === "year" ? "years" : resourceType === "subject" ? "subjects" : resourceType === "chapter" ? "chapters" : "questions";
   const supabase = createAdminClient();
-  const { error } = await supabase.from(table).update({ status }).eq("id", resourceId);
+  const organizationId = await getCurrentOrganizationId();
+  const { error } = await supabase.from(table).update({ status }).eq("organization_id", organizationId).eq("id", resourceId);
   if (error) throw new Error(error.message);
   await logAudit({
     actorId: user.id,
@@ -631,9 +694,10 @@ export async function archiveContentAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: beforeData } = await supabase.from(table).select("*").eq("id", resourceId).single();
+  const organizationId = await getCurrentOrganizationId();
+  const { data: beforeData } = await supabase.from(table).select("*").eq("organization_id", organizationId).eq("id", resourceId).single();
   const payload = { status: "archived" };
-  const { error } = await supabase.from(table).update(payload).eq("id", resourceId);
+  const { error } = await supabase.from(table).update(payload).eq("organization_id", organizationId).eq("id", resourceId);
   if (error) throw new Error(error.message);
   await logAudit({
     actorId: user.id,
@@ -685,8 +749,9 @@ export async function updateContentAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: beforeData } = await supabase.from(table).select("*").eq("id", resourceId).single();
-  const { error } = await supabase.from(table).update(payload).eq("id", resourceId);
+  const organizationId = await getCurrentOrganizationId();
+  const { data: beforeData } = await supabase.from(table).select("*").eq("organization_id", organizationId).eq("id", resourceId).single();
+  const { error } = await supabase.from(table).update(payload).eq("organization_id", organizationId).eq("id", resourceId);
   if (error) throw new Error(error.message);
   await logAudit({
     actorId: user.id,
@@ -702,7 +767,9 @@ export async function updateContentAction(formData: FormData) {
 
 export async function createRecordingAction(formData: FormData) {
   const { user } = await requireAdminAccess();
+  const organizationId = await getCurrentOrganizationId();
   const payload = {
+    organization_id: organizationId,
     chapter_id: textValue(formData, "chapter_id"),
     question_id: nullableTextValue(formData, "question_id"),
     title: textValue(formData, "title"),
@@ -747,8 +814,9 @@ export async function updateRecordingAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: beforeData } = await supabase.from("recordings").select("*").eq("id", recordingId).single();
-  const { error } = await supabase.from("recordings").update(payload).eq("id", recordingId);
+  const organizationId = await getCurrentOrganizationId();
+  const { data: beforeData } = await supabase.from("recordings").select("*").eq("organization_id", organizationId).eq("id", recordingId).single();
+  const { error } = await supabase.from("recordings").update(payload).eq("organization_id", organizationId).eq("id", recordingId);
   if (error) throw new Error(error.message);
   await logAudit({
     actorId: user.id,
@@ -769,7 +837,8 @@ export async function setRecordingStatusAction(formData: FormData) {
   if (isDemoMode()) await demoRedirect("/admin/recordings");
   ensureSupabaseReady();
   const supabase = createAdminClient();
-  const { error } = await supabase.from("recordings").update({ status }).eq("id", recordingId);
+  const organizationId = await getCurrentOrganizationId();
+  const { error } = await supabase.from("recordings").update({ status }).eq("organization_id", organizationId).eq("id", recordingId);
   if (error) throw new Error(error.message);
   await logAudit({ actorId: user.id, action: "recording_updated", resourceType: "recording", resourceId: recordingId, afterData: { status } });
   revalidatePath("/admin/recordings");
@@ -788,9 +857,14 @@ export async function uploadMaterialAction(formData: FormData) {
     redirect(`/admin/materials?error=${encodeURIComponent(validationError)}`);
   }
 
+  if (isDemoMode()) await demoRedirect("/admin/materials");
+  ensureSupabaseReady();
+  const supabase = createAdminClient();
+  const organizationId = await getCurrentOrganizationId();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-  const fileKey = `materials/${crypto.randomUUID()}-${safeName}`;
+  const fileKey = `organizations/${organizationId}/materials/${crypto.randomUUID()}-${safeName}`;
   const payload = {
+    organization_id: organizationId,
     chapter_id: textValue(formData, "chapter_id"),
     question_id: nullableTextValue(formData, "question_id"),
     title: textValue(formData, "title"),
@@ -805,10 +879,6 @@ export async function uploadMaterialAction(formData: FormData) {
     is_ai_indexable: booleanValue(formData, "is_ai_indexable"),
     uploaded_by: user.id
   };
-
-  if (isDemoMode()) await demoRedirect("/admin/materials");
-  ensureSupabaseReady();
-  const supabase = createAdminClient();
   const { error: uploadError } = await supabase.storage.from("solution-materials").upload(fileKey, file, {
     contentType: file.type,
     upsert: false
@@ -828,7 +898,8 @@ export async function setMaterialStatusAction(formData: FormData) {
   if (isDemoMode()) await demoRedirect("/admin/materials");
   ensureSupabaseReady();
   const supabase = createAdminClient();
-  const { error } = await supabase.from("solution_materials").update({ status }).eq("id", materialId);
+  const organizationId = await getCurrentOrganizationId();
+  const { error } = await supabase.from("solution_materials").update({ status }).eq("organization_id", organizationId).eq("id", materialId);
   if (error) throw new Error(error.message);
   await logAudit({
     actorId: user.id,
@@ -858,8 +929,18 @@ export async function updateMaterialAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: beforeData } = await supabase.from("solution_materials").select("*").eq("id", materialId).single();
-  const { error } = await supabase.from("solution_materials").update(payload).eq("id", materialId);
+  const organizationId = await getCurrentOrganizationId();
+  const { data: beforeData } = await supabase
+    .from("solution_materials")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("id", materialId)
+    .single();
+  const { error } = await supabase
+    .from("solution_materials")
+    .update(payload)
+    .eq("organization_id", organizationId)
+    .eq("id", materialId);
   if (error) throw new Error(error.message);
   await logAudit({
     actorId: user.id,
@@ -881,7 +962,13 @@ export async function archiveExamAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: beforeData, error: fetchError } = await supabase.from("exams").select("*").eq("id", examId).single();
+  const organizationId = await getCurrentOrganizationId();
+  const { data: beforeData, error: fetchError } = await supabase
+    .from("exams")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("id", examId)
+    .single();
   if (fetchError || !beforeData) {
     redirect("/admin/exams?error=Exam%20not%20found");
   }
@@ -895,7 +982,7 @@ export async function archiveExamAction(formData: FormData) {
   }
 
   const payload = { status: "archived" };
-  const { error } = await supabase.from("exams").update(payload).eq("id", examId);
+  const { error } = await supabase.from("exams").update(payload).eq("organization_id", organizationId).eq("id", examId);
   if (error) throw new Error(error.message);
 
   await logAudit({
@@ -915,11 +1002,13 @@ export async function archiveExamAction(formData: FormData) {
 async function restoredExamStatus(
   supabase: ReturnType<typeof createAdminClient>,
   examId: string,
+  organizationId: string,
   exam: { published_at?: string | null }
 ) {
   const { data: archiveLog } = await supabase
     .from("audit_logs")
     .select("before_data")
+    .eq("organization_id", organizationId)
     .eq("resource_type", "exam")
     .eq("resource_id", examId)
     .eq("action", "exam_archived")
@@ -943,7 +1032,13 @@ export async function unarchiveExamAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: beforeData, error: fetchError } = await supabase.from("exams").select("*").eq("id", examId).single();
+  const organizationId = await getCurrentOrganizationId();
+  const { data: beforeData, error: fetchError } = await supabase
+    .from("exams")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("id", examId)
+    .single();
   if (fetchError || !beforeData) {
     redirect("/admin/exams?error=Exam%20not%20found");
   }
@@ -952,9 +1047,9 @@ export async function unarchiveExamAction(formData: FormData) {
     redirect("/admin/exams?success=Exam%20is%20already%20active");
   }
 
-  const status = await restoredExamStatus(supabase, examId, beforeData);
+  const status = await restoredExamStatus(supabase, examId, organizationId, beforeData);
   const payload = { status };
-  const { error } = await supabase.from("exams").update(payload).eq("id", examId);
+  const { error } = await supabase.from("exams").update(payload).eq("organization_id", organizationId).eq("id", examId);
   if (error) throw new Error(error.message);
 
   await logAudit({
@@ -979,7 +1074,13 @@ export async function unpublishExamAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: beforeData, error: fetchError } = await supabase.from("exams").select("*").eq("id", examId).single();
+  const organizationId = await getCurrentOrganizationId();
+  const { data: beforeData, error: fetchError } = await supabase
+    .from("exams")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("id", examId)
+    .single();
   if (fetchError || !beforeData) {
     redirect("/admin/exams?error=Exam%20not%20found");
   }
@@ -989,7 +1090,7 @@ export async function unpublishExamAction(formData: FormData) {
   }
 
   const payload = { status: "review" };
-  const { error } = await supabase.from("exams").update(payload).eq("id", examId);
+  const { error } = await supabase.from("exams").update(payload).eq("organization_id", organizationId).eq("id", examId);
   if (error) throw new Error(error.message);
 
   await logAudit({
@@ -1009,7 +1110,8 @@ export async function unpublishExamAction(formData: FormData) {
 export async function createTagAction(formData: FormData) {
   const { user } = await requireAdminAccess();
   const name = textValue(formData, "name");
-  const payload = { name, slug: slugify(name) };
+  const organizationId = await getCurrentOrganizationId();
+  const payload = { organization_id: organizationId, name, slug: slugify(name) };
   if (isDemoMode()) await demoRedirect("/admin/tags");
   ensureSupabaseReady();
   const supabase = createAdminClient();
@@ -1031,8 +1133,9 @@ export async function updateTagAction(formData: FormData) {
   ensureSupabaseReady();
 
   const supabase = createAdminClient();
-  const { data: beforeData } = await supabase.from("tags").select("*").eq("id", tagId).single();
-  const { error } = await supabase.from("tags").update(payload).eq("id", tagId);
+  const organizationId = await getCurrentOrganizationId();
+  const { data: beforeData } = await supabase.from("tags").select("*").eq("organization_id", organizationId).eq("id", tagId).single();
+  const { error } = await supabase.from("tags").update(payload).eq("organization_id", organizationId).eq("id", tagId);
   if (error) throw new Error(error.message);
   await logAudit({
     actorId: user.id,

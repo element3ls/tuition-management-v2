@@ -2,9 +2,11 @@ import "server-only";
 
 import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentOrganizationId } from "@/lib/tenancy/server";
 import type { ActivityEventType } from "@/types/domain";
 
 type LogActivityInput = {
+  organizationId?: string;
   userId: string;
   eventType: ActivityEventType;
   resourceType: string | null;
@@ -19,6 +21,7 @@ export async function logActivityEvent(input: LogActivityInput) {
 
   const supabase = createAdminClient();
   await supabase.from("activity_events").insert({
+    organization_id: input.organizationId ?? (await getCurrentOrganizationId()),
     user_id: input.userId,
     event_type: input.eventType,
     resource_type: input.resourceType,

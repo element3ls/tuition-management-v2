@@ -329,6 +329,25 @@ export type ExamProcessingRun = {
   created_at: string;
 };
 
+export type AIUsageEvent = {
+  organization_id: string;
+  id: string;
+  exam_id: string | null;
+  run_id: string | null;
+  provider: "openai" | string;
+  model: string | null;
+  request_type: string;
+  status: "started" | "completed" | "failed";
+  input_tokens: number | null;
+  output_tokens: number | null;
+  total_tokens: number | null;
+  estimated_cost_cents: number | null;
+  response_id: string | null;
+  error: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 export type AccessGrant = {
   organization_id: string;
   id: string;
@@ -403,6 +422,7 @@ export type AppData = {
   examQuestions: ExamQuestion[];
   examAssets: ExamAsset[];
   examProcessingRuns: ExamProcessingRun[];
+  aiUsageEvents: AIUsageEvent[];
   accessGrants: AccessGrant[];
   tags: Tag[];
   contentTags: ContentTag[];

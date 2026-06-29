@@ -356,6 +356,7 @@ export const demoData: AppData = {
       created_at: now
     }
   ],
+  aiUsageEvents: [],
   accessGrants: [
     {
       organization_id: demoIds.organization,

@@ -3,6 +3,7 @@ import { getCurrentUserRoles, requireAuth } from "@/lib/auth/session";
 import { hasAdminRole } from "@/lib/auth/roles";
 import { canAccessResource } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentOrganizationId } from "@/lib/tenancy/server";
 import { getAppData } from "@/server/data/app-data";
 
 export async function GET(
@@ -13,9 +14,11 @@ export async function GET(
   const roles = await getCurrentUserRoles();
   const { examId, assetId } = await params;
   const supabase = createAdminClient();
+  const organizationId = await getCurrentOrganizationId();
   const { data: asset } = await supabase
     .from("exam_assets")
     .select("exam_id, storage_bucket, storage_key, student_visible, upload_status")
+    .eq("organization_id", organizationId)
     .eq("id", assetId)
     .eq("exam_id", examId)
     .single();

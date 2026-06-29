@@ -4,6 +4,7 @@ import { logAudit } from "@/lib/audit/log";
 import { sanitizeExamHtml } from "@/lib/exams/html";
 import { examQuestionsInputSchema } from "@/lib/exams/validation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentOrganizationId } from "@/lib/tenancy/server";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ examId: string }> }) {
   const { user } = await requireAdminAccess();
@@ -14,7 +15,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ exam
   }
 
   const supabase = createAdminClient();
-  const { data: exam } = await supabase.from("exams").select("status").eq("id", examId).single();
+  const organizationId = await getCurrentOrganizationId();
+  const { data: exam } = await supabase
+    .from("exams")
+    .select("status")
+    .eq("organization_id", organizationId)
+    .eq("id", examId)
+    .single();
   if (!exam) return NextResponse.json({ error: "Exam not found." }, { status: 404 });
   if (exam.status !== "draft" && exam.status !== "review") {
     return NextResponse.json({ error: "Exam questions cannot be edited in the current state." }, { status: 409 });
@@ -23,6 +30,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ exam
   const { data: readyDisplayAssets } = await supabase
     .from("exam_assets")
     .select("*")
+    .eq("organization_id", organizationId)
     .eq("exam_id", examId)
     .eq("variant", "display")
     .eq("upload_status", "ready");
@@ -80,6 +88,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ exam
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   await logAudit({
+    organizationId,
     actorId: user.id,
     action: "exam_updated",
     resourceType: "exam",

@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   requireSuperAdminAccess: vi.fn(),
   isDemoMode: vi.fn(),
   isSupabaseConfigured: vi.fn(),
+  getCurrentOrganizationId: vi.fn(),
   createAdminClient: vi.fn(),
   logAudit: vi.fn()
 }));
@@ -38,6 +39,10 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: mocks.createAdminClient
 }));
 
+vi.mock("@/lib/tenancy/server", () => ({
+  getCurrentOrganizationId: mocks.getCurrentOrganizationId
+}));
+
 vi.mock("@/lib/audit/log", () => ({
   logAudit: mocks.logAudit
 }));
@@ -52,18 +57,24 @@ function formDataForExam() {
 
 function mockAdminTables(exam: Record<string, unknown>, archiveLog: Record<string, unknown> | null = null) {
   const examSingle = vi.fn().mockResolvedValue({ data: exam, error: null });
-  const examEqAfterSelect = vi.fn(() => ({ single: examSingle }));
-  const examSelect = vi.fn(() => ({ eq: examEqAfterSelect }));
-  const eqAfterUpdate = vi.fn().mockResolvedValue({ error: null });
+  const examSelectBuilder = {
+    eq: vi.fn(() => examSelectBuilder),
+    single: examSingle
+  };
+  const examSelect = vi.fn(() => examSelectBuilder);
+  const eqAfterUpdate = vi.fn(() =>
+    eqAfterUpdate.mock.calls.length >= 2 ? Promise.resolve({ error: null }) : { eq: eqAfterUpdate }
+  );
   const update = vi.fn(() => ({ eq: eqAfterUpdate }));
 
   const auditMaybeSingle = vi.fn().mockResolvedValue({ data: archiveLog, error: null });
   const auditLimit = vi.fn(() => ({ maybeSingle: auditMaybeSingle }));
   const auditOrder = vi.fn(() => ({ limit: auditLimit }));
-  const auditEqAction = vi.fn(() => ({ order: auditOrder }));
-  const auditEqResourceId = vi.fn(() => ({ eq: auditEqAction }));
-  const auditEqResourceType = vi.fn(() => ({ eq: auditEqResourceId }));
-  const auditSelect = vi.fn(() => ({ eq: auditEqResourceType }));
+  const auditSelectBuilder = {
+    eq: vi.fn(() => auditSelectBuilder),
+    order: auditOrder
+  };
+  const auditSelect = vi.fn(() => auditSelectBuilder);
 
   const from = vi.fn((table: string) => {
     if (table === "audit_logs") return { select: auditSelect };
@@ -72,7 +83,7 @@ function mockAdminTables(exam: Record<string, unknown>, archiveLog: Record<strin
 
   mocks.createAdminClient.mockReturnValue({ from });
 
-  return { from, examSelect, update, eqAfterUpdate, auditSelect };
+  return { from, examSelect, examSelectBuilder, update, eqAfterUpdate, auditSelect, auditSelectBuilder };
 }
 
 describe("archiveExamAction", () => {
@@ -81,6 +92,7 @@ describe("archiveExamAction", () => {
     mocks.requireAdminAccess.mockResolvedValue({ user: { id: demoIds.admin }, roles: ["admin"] });
     mocks.isDemoMode.mockReturnValue(false);
     mocks.isSupabaseConfigured.mockReturnValue(true);
+    mocks.getCurrentOrganizationId.mockResolvedValue(demoIds.organization);
   });
 
   it("archives an exam and records an explicit audit event", async () => {
@@ -95,6 +107,7 @@ describe("archiveExamAction", () => {
     await expect(archiveExamAction(formDataForExam())).rejects.toThrow("redirect:/admin/exams?success=Exam%20archived");
 
     expect(table.update).toHaveBeenCalledWith({ status: "archived" });
+    expect(table.eqAfterUpdate).toHaveBeenCalledWith("organization_id", demoIds.organization);
     expect(table.eqAfterUpdate).toHaveBeenCalledWith("id", demoIds.exam);
     expect(mocks.logAudit).toHaveBeenCalledWith({
       actorId: demoIds.admin,
@@ -130,6 +143,7 @@ describe("unarchiveExamAction", () => {
     mocks.requireAdminAccess.mockResolvedValue({ user: { id: demoIds.admin }, roles: ["admin"] });
     mocks.isDemoMode.mockReturnValue(false);
     mocks.isSupabaseConfigured.mockReturnValue(true);
+    mocks.getCurrentOrganizationId.mockResolvedValue(demoIds.organization);
   });
 
   it("restores an archived exam to the status captured by the archive audit log", async () => {
@@ -145,6 +159,7 @@ describe("unarchiveExamAction", () => {
     await expect(unarchiveExamAction(formDataForExam())).rejects.toThrow("redirect:/admin/exams?success=Exam%20unarchived");
 
     expect(table.update).toHaveBeenCalledWith({ status: "published" });
+    expect(table.eqAfterUpdate).toHaveBeenCalledWith("organization_id", demoIds.organization);
     expect(table.eqAfterUpdate).toHaveBeenCalledWith("id", demoIds.exam);
     expect(mocks.logAudit).toHaveBeenCalledWith({
       actorId: demoIds.admin,
@@ -179,6 +194,7 @@ describe("unpublishExamAction", () => {
     mocks.requireAdminAccess.mockResolvedValue({ user: { id: demoIds.admin }, roles: ["admin"] });
     mocks.isDemoMode.mockReturnValue(false);
     mocks.isSupabaseConfigured.mockReturnValue(true);
+    mocks.getCurrentOrganizationId.mockResolvedValue(demoIds.organization);
   });
 
   it("returns a published exam to review and records an audit event", async () => {
@@ -194,6 +210,7 @@ describe("unpublishExamAction", () => {
     await expect(unpublishExamAction(formDataForExam())).rejects.toThrow("redirect:/admin/exams?success=Exam%20unpublished");
 
     expect(table.update).toHaveBeenCalledWith({ status: "review" });
+    expect(table.eqAfterUpdate).toHaveBeenCalledWith("organization_id", demoIds.organization);
     expect(table.eqAfterUpdate).toHaveBeenCalledWith("id", demoIds.exam);
     expect(mocks.logAudit).toHaveBeenCalledWith({
       actorId: demoIds.admin,

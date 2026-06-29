@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminAccess } from "@/lib/auth/session";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentOrganizationId } from "@/lib/tenancy/server";
 
 export async function GET(request: Request, { params }: { params: Promise<{ examId: string }> }) {
   await requireAdminAccess();
@@ -12,9 +13,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ exam
     });
   }
   const supabase = createAdminClient();
+  const organizationId = await getCurrentOrganizationId();
   const { data: asset } = await supabase
     .from("exam_assets")
     .select("storage_bucket, storage_key")
+    .eq("organization_id", organizationId)
     .eq("exam_id", examId)
     .eq("role", "source_pdf")
     .eq("variant", "raw")

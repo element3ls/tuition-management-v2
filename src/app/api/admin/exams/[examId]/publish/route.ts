@@ -4,6 +4,7 @@ import { logAudit } from "@/lib/audit/log";
 import { sanitizeExamHtml } from "@/lib/exams/html";
 import { examQuestionsInputSchema } from "@/lib/exams/validation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentOrganizationId } from "@/lib/tenancy/server";
 
 export async function POST(request: Request, { params }: { params: Promise<{ examId: string }> }) {
   const { user } = await requireAdminAccess();
@@ -17,7 +18,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ exa
   }
 
   const supabase = createAdminClient();
-  const { data: exam } = await supabase.from("exams").select("status").eq("id", examId).single();
+  const organizationId = await getCurrentOrganizationId();
+  const { data: exam } = await supabase
+    .from("exams")
+    .select("status")
+    .eq("organization_id", organizationId)
+    .eq("id", examId)
+    .single();
   if (!exam) return NextResponse.json({ error: "Exam not found." }, { status: 404 });
   if (exam.status !== "draft" && exam.status !== "review") {
     return NextResponse.json({ error: "Only a reviewed exam can be published." }, { status: 409 });
@@ -25,6 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ exa
   const { data: readyDisplayAssets } = await supabase
     .from("exam_assets")
     .select("*")
+    .eq("organization_id", organizationId)
     .eq("exam_id", examId)
     .eq("variant", "display")
     .eq("upload_status", "ready");
@@ -82,6 +90,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ exa
   if (publishError) return NextResponse.json({ error: publishError.message }, { status: 500 });
 
   await logAudit({
+    organizationId,
     actorId: user.id,
     action: "exam_published",
     resourceType: "exam",

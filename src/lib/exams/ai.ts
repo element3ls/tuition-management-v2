@@ -1,10 +1,12 @@
 import "server-only";
 
 import { z } from "zod";
+import { logAIUsageEvent, type AIUsageTokenCounts } from "@/lib/ai/usage";
 import { logAudit } from "@/lib/audit/log";
 import { getOpenAIEnv } from "@/lib/env";
 import { importTeacherHtmlAnswers, mapTeacherAnswers } from "@/lib/exams/html";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentOrganizationId } from "@/lib/tenancy/server";
 import type { ExamIntakeMode, ExamProcessingStatus } from "@/types/domain";
 
 const generatedExamSchema = z.object({
@@ -88,6 +90,11 @@ type OpenAIResponse = {
   incomplete_details?: { reason?: string } | null;
   output_text?: string;
   output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    total_tokens?: number;
+  };
 };
 
 function responseText(response: OpenAIResponse) {
@@ -103,6 +110,16 @@ function responseFailureMessage(response: OpenAIResponse) {
   return response.error?.message ?? response.incomplete_details?.reason ?? `OpenAI processing ended with status ${response.status ?? "unknown"}.`;
 }
 
+function responseUsage(response: OpenAIResponse): AIUsageTokenCounts {
+  const inputTokens = response.usage?.input_tokens ?? null;
+  const outputTokens = response.usage?.output_tokens ?? null;
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens: response.usage?.total_tokens ?? (inputTokens !== null && outputTokens !== null ? inputTokens + outputTokens : null)
+  };
+}
+
 async function openAIRequest(path: string, init?: RequestInit) {
   const { apiKey } = getOpenAIEnv();
   const response = await fetch(`https://api.openai.com/v1${path}`, {
@@ -115,22 +132,52 @@ async function openAIRequest(path: string, init?: RequestInit) {
   return body;
 }
 
-async function failRun(runId: string, examId: string, message: string) {
+async function failRun(
+  runId: string,
+  examId: string,
+  organizationId: string,
+  message: string,
+  options: AIUsageTokenCounts & { model?: string | null; responseId?: string | null } = {}
+) {
   const supabase = createAdminClient();
   const completedAt = new Date().toISOString();
   await Promise.all([
-    supabase.from("exam_processing_runs").update({ status: "failed", error: message, completed_at: completedAt }).eq("id", runId),
+    supabase
+      .from("exam_processing_runs")
+      .update({ status: "failed", error: message, completed_at: completedAt })
+      .eq("organization_id", organizationId)
+      .eq("id", runId),
     supabase
       .from("exams")
       .update({ processing_status: "failed", ai_error: message, processing_completed_at: completedAt })
+      .eq("organization_id", organizationId)
       .eq("id", examId)
   ]);
+  await logAIUsageEvent({
+    organizationId,
+    examId,
+    runId,
+    model: options.model,
+    requestType: "exam_processing",
+    status: "failed",
+    responseId: options.responseId,
+    error: message,
+    inputTokens: options.inputTokens,
+    outputTokens: options.outputTokens,
+    totalTokens: options.totalTokens
+  });
   return { status: "failed" as ExamProcessingStatus, error: message };
 }
 
 export async function startExamProcessing(examId: string, actorId: string) {
   const supabase = createAdminClient();
-  const { data: exam, error: examError } = await supabase.from("exams").select("*").eq("id", examId).single();
+  const organizationId = await getCurrentOrganizationId();
+  const { data: exam, error: examError } = await supabase
+    .from("exams")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("id", examId)
+    .single();
   if (examError || !exam) throw new Error("Exam not found.");
   if (exam.intake_mode === "handwritten_images") throw new Error("Handwritten exams do not use AI processing.");
   if (exam.status === "published" || exam.status === "archived") throw new Error("This exam cannot be reprocessed.");
@@ -139,6 +186,7 @@ export async function startExamProcessing(examId: string, actorId: string) {
   const { data: sourceAsset } = await supabase
     .from("exam_assets")
     .select("*")
+    .eq("organization_id", organizationId)
     .eq("exam_id", examId)
     .eq("role", "source_pdf")
     .eq("variant", "raw")
@@ -152,6 +200,7 @@ export async function startExamProcessing(examId: string, actorId: string) {
     const { data: htmlAsset } = await supabase
       .from("exam_assets")
       .select("id")
+      .eq("organization_id", organizationId)
       .eq("exam_id", examId)
       .eq("role", "answer_html")
       .eq("variant", "raw")
@@ -169,6 +218,7 @@ export async function startExamProcessing(examId: string, actorId: string) {
   const runId = crypto.randomUUID();
   const startedAt = new Date().toISOString();
   const { error: runError } = await supabase.from("exam_processing_runs").insert({
+    organization_id: organizationId,
     id: runId,
     exam_id: examId,
     mode: exam.intake_mode,
@@ -211,6 +261,7 @@ export async function startExamProcessing(examId: string, actorId: string) {
     const { error: updateRunError } = await supabase
       .from("exam_processing_runs")
       .update({ response_id: response.id })
+      .eq("organization_id", organizationId)
       .eq("id", runId);
     if (updateRunError) throw new Error(updateRunError.message);
     const { error: updateExamError } = await supabase
@@ -223,10 +274,23 @@ export async function startExamProcessing(examId: string, actorId: string) {
         processing_started_at: startedAt,
         processing_completed_at: null
       })
+      .eq("organization_id", organizationId)
       .eq("id", examId);
     if (updateExamError) throw new Error(updateExamError.message);
 
+    await logAIUsageEvent({
+      organizationId,
+      examId,
+      runId,
+      model,
+      requestType: "exam_processing",
+      status: "started",
+      responseId: response.id,
+      metadata: { mode: exam.intake_mode }
+    });
+
     await logAudit({
+      organizationId,
       actorId,
       action: "exam_processing_started",
       resourceType: "exam",
@@ -236,16 +300,17 @@ export async function startExamProcessing(examId: string, actorId: string) {
     return { status: "processing" as ExamProcessingStatus };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not start AI processing.";
-    await failRun(runId, examId, message);
+    await failRun(runId, examId, organizationId, message, { model });
     throw error;
   }
 }
 
-async function loadTeacherHtml(examId: string) {
+async function loadTeacherHtml(examId: string, organizationId: string) {
   const supabase = createAdminClient();
   const { data: htmlAsset } = await supabase
     .from("exam_assets")
     .select("*")
+    .eq("organization_id", organizationId)
     .eq("exam_id", examId)
     .eq("role", "answer_html")
     .eq("variant", "raw")
@@ -260,6 +325,7 @@ async function loadTeacherHtml(examId: string) {
     supabase
       .from("exam_assets")
       .select("*")
+      .eq("organization_id", organizationId)
       .eq("exam_id", examId)
       .eq("role", "html_image")
       .eq("variant", "display")
@@ -286,7 +352,13 @@ export async function finalizeExamProcessing(responseId: string, actorId?: strin
   if (response.status === "queued" || response.status === "in_progress") {
     return { status: "processing" as ExamProcessingStatus, error: null };
   }
-  if (response.status !== "completed") return failRun(run.id, run.exam_id, responseFailureMessage(response));
+  if (response.status !== "completed") {
+    return failRun(run.id, run.exam_id, run.organization_id, responseFailureMessage(response), {
+      model: run.model,
+      responseId,
+      ...responseUsage(response)
+    });
+  }
 
   let generated;
   try {
@@ -305,7 +377,9 @@ export async function finalizeExamProcessing(responseId: string, actorId?: strin
     return failRun(
       run.id,
       run.exam_id,
-      error instanceof Error ? error.message : "The AI response did not contain valid exam data."
+      run.organization_id,
+      error instanceof Error ? error.message : "The AI response did not contain valid exam data.",
+      { model: run.model, responseId, ...responseUsage(response) }
     );
   }
 
@@ -329,7 +403,7 @@ export async function finalizeExamProcessing(responseId: string, actorId?: strin
     }));
 
     if (run.mode === "teacher_html") {
-      questions = mapTeacherAnswers(questions, await loadTeacherHtml(run.exam_id));
+      questions = mapTeacherAnswers(questions, await loadTeacherHtml(run.exam_id, run.organization_id));
     }
 
     const { data: didComplete, error: completionError } = await supabase.rpc("complete_exam_processing_run", {
@@ -339,7 +413,19 @@ export async function finalizeExamProcessing(responseId: string, actorId?: strin
     if (completionError) throw new Error(completionError.message);
 
     if (didComplete) {
+      await logAIUsageEvent({
+        organizationId: run.organization_id,
+        examId: run.exam_id,
+        runId: run.id,
+        model: run.model,
+        requestType: "exam_processing",
+        status: "completed",
+        responseId,
+        ...responseUsage(response),
+        metadata: { mode: run.mode, question_count: questions.length }
+      });
       await logAudit({
+        organizationId: run.organization_id,
         actorId: actorId ?? run.started_by,
         action: "exam_processing_completed",
         resourceType: "exam",
@@ -349,13 +435,25 @@ export async function finalizeExamProcessing(responseId: string, actorId?: strin
     }
     return { status: "completed" as ExamProcessingStatus, error: null, questionCount: questions.length };
   } catch (error) {
-    return failRun(run.id, run.exam_id, error instanceof Error ? error.message : "Could not save processed questions.");
+    return failRun(
+      run.id,
+      run.exam_id,
+      run.organization_id,
+      error instanceof Error ? error.message : "Could not save processed questions.",
+      { model: run.model, responseId, ...responseUsage(response) }
+    );
   }
 }
 
 export async function syncExamProcessing(examId: string, actorId: string) {
   const supabase = createAdminClient();
-  const { data: exam, error: examError } = await supabase.from("exams").select("*").eq("id", examId).single();
+  const organizationId = await getCurrentOrganizationId();
+  const { data: exam, error: examError } = await supabase
+    .from("exams")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("id", examId)
+    .single();
   if (examError || !exam) throw new Error("Exam not found.");
   if (exam.processing_status !== "processing") {
     return { status: exam.processing_status as ExamProcessingStatus, error: exam.ai_error as string | null };
@@ -363,6 +461,7 @@ export async function syncExamProcessing(examId: string, actorId: string) {
   const { data: run } = await supabase
     .from("exam_processing_runs")
     .select("*")
+    .eq("organization_id", organizationId)
     .eq("exam_id", examId)
     .eq("status", "processing")
     .order("started_at", { ascending: false })

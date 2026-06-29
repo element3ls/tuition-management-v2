@@ -3,6 +3,7 @@ import "server-only";
 import { logAudit } from "@/lib/audit/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeExamImage } from "@/lib/exams/images";
+import { getCurrentOrganizationId } from "@/lib/tenancy/server";
 import {
   examAssetBucket,
   expectedAssetSignature,
@@ -13,6 +14,7 @@ import {
 import type { ExamAssetRole } from "@/types/domain";
 
 export type PrepareExamAssetInput = {
+  organizationId?: string;
   examId: string;
   actorId: string;
   role: ExamAssetRole;
@@ -27,11 +29,18 @@ export type PrepareExamAssetInput = {
 
 export async function prepareExamAssetUpload(input: PrepareExamAssetInput) {
   const supabase = createAdminClient();
+  const organizationId = input.organizationId ?? (await getCurrentOrganizationId());
   const [{ data: exam }, { data: existingAssets, error: assetsError }] = await Promise.all([
-    supabase.from("exams").select("id, status, intake_mode").eq("id", input.examId).single(),
+    supabase
+      .from("exams")
+      .select("id, status, intake_mode, organization_id")
+      .eq("organization_id", organizationId)
+      .eq("id", input.examId)
+      .single(),
     supabase
       .from("exam_assets")
       .select("role, file_name, mime_type, size_bytes")
+      .eq("organization_id", organizationId)
       .eq("exam_id", input.examId)
       .eq("variant", "raw")
       .neq("upload_status", "failed")
@@ -85,8 +94,9 @@ export async function prepareExamAssetUpload(input: PrepareExamAssetInput) {
         ? ".html"
         : undefined;
   const fileName = safeExamFileName(input.fileName, extension);
-  const storageKey = `${input.examId}/raw/${assetId}/${fileName}`;
+  const storageKey = `organizations/${organizationId}/exams/${input.examId}/raw/${assetId}/${fileName}`;
   const { error: insertError } = await supabase.from("exam_assets").insert({
+    organization_id: organizationId,
     id: assetId,
     exam_id: input.examId,
     role: input.role,
@@ -112,18 +122,20 @@ export async function prepareExamAssetUpload(input: PrepareExamAssetInput) {
 
   const { data, error } = await supabase.storage.from(examAssetBucket).createSignedUploadUrl(storageKey);
   if (error || !data?.signedUrl) {
-    await supabase.from("exam_assets").delete().eq("id", assetId);
+    await supabase.from("exam_assets").delete().eq("organization_id", organizationId).eq("id", assetId);
     throw new Error(error?.message ?? "Could not prepare the asset upload.");
   }
 
   return { assetId, signedUploadUrl: data.signedUrl };
 }
 
-export async function completeExamAssetUpload(examId: string, assetId: string, actorId: string) {
+export async function completeExamAssetUpload(examId: string, assetId: string, actorId: string, organizationId?: string) {
   const supabase = createAdminClient();
+  const activeOrganizationId = organizationId ?? (await getCurrentOrganizationId());
   const { data: asset, error: assetError } = await supabase
     .from("exam_assets")
     .select("*")
+    .eq("organization_id", activeOrganizationId)
     .eq("id", assetId)
     .eq("exam_id", examId)
     .single();
@@ -134,13 +146,19 @@ export async function completeExamAssetUpload(examId: string, assetId: string, a
     const { data: existingDisplay } = await supabase
       .from("exam_assets")
       .select("*")
+      .eq("organization_id", activeOrganizationId)
       .eq("original_asset_id", asset.id)
       .eq("variant", "display")
       .maybeSingle();
     return { asset: existingDisplay ?? asset };
   }
   if (asset.variant !== "raw" || asset.upload_status !== "pending") throw new Error("This upload is not awaiting completion.");
-  const { data: exam } = await supabase.from("exams").select("status").eq("id", examId).single();
+  const { data: exam } = await supabase
+    .from("exams")
+    .select("status")
+    .eq("organization_id", activeOrganizationId)
+    .eq("id", examId)
+    .single();
   if (!exam || exam.status === "published" || exam.status === "archived") {
     throw new Error("This exam can no longer accept completed uploads.");
   }
@@ -155,12 +173,20 @@ export async function completeExamAssetUpload(examId: string, assetId: string, a
   const buffer = Buffer.from(await response.arrayBuffer());
   if (buffer.length !== Number(asset.size_bytes)) {
     await supabase.storage.from(asset.storage_bucket).remove([asset.storage_key]);
-    await supabase.from("exam_assets").update({ upload_status: "failed" }).eq("id", asset.id);
+    await supabase
+      .from("exam_assets")
+      .update({ upload_status: "failed" })
+      .eq("organization_id", activeOrganizationId)
+      .eq("id", asset.id);
     throw new Error("Uploaded file size does not match the prepared upload.");
   }
   if (!expectedAssetSignature(asset.mime_type, buffer)) {
     await supabase.storage.from(asset.storage_bucket).remove([asset.storage_key]);
-    await supabase.from("exam_assets").update({ upload_status: "failed" }).eq("id", asset.id);
+    await supabase
+      .from("exam_assets")
+      .update({ upload_status: "failed" })
+      .eq("organization_id", activeOrganizationId)
+      .eq("id", asset.id);
     throw new Error("Uploaded file content does not match its declared type.");
   }
 
@@ -168,7 +194,7 @@ export async function completeExamAssetUpload(examId: string, assetId: string, a
   if (asset.mime_type.startsWith("image/")) {
     const normalized = await normalizeExamImage(buffer, asset.rotation);
     const displayId = crypto.randomUUID();
-    const displayKey = `${examId}/display/${displayId}.webp`;
+    const displayKey = `organizations/${activeOrganizationId}/exams/${examId}/display/${displayId}.webp`;
     const { error: displayUploadError } = await supabase.storage.from(examAssetBucket).upload(displayKey, normalized.buffer, {
       contentType: normalized.mimeType,
       cacheControl: "3600",
@@ -177,6 +203,7 @@ export async function completeExamAssetUpload(examId: string, assetId: string, a
     if (displayUploadError) throw new Error(displayUploadError.message);
 
     const displayPayload = {
+      organization_id: activeOrganizationId,
       id: displayId,
       exam_id: examId,
       question_id: asset.question_id,
@@ -215,7 +242,11 @@ export async function completeExamAssetUpload(examId: string, assetId: string, a
     completedAsset = inserted;
   }
 
-  const { error: readyError } = await supabase.from("exam_assets").update({ upload_status: "ready" }).eq("id", asset.id);
+  const { error: readyError } = await supabase
+    .from("exam_assets")
+    .update({ upload_status: "ready" })
+    .eq("organization_id", activeOrganizationId)
+    .eq("id", asset.id);
   if (readyError) throw new Error(readyError.message);
 
   if (asset.role === "source_pdf") {
@@ -228,10 +259,12 @@ export async function completeExamAssetUpload(examId: string, assetId: string, a
         source_mime_type: asset.mime_type,
         source_size_bytes: asset.size_bytes
       })
+      .eq("organization_id", activeOrganizationId)
       .eq("id", examId);
   }
 
   await logAudit({
+    organizationId: activeOrganizationId,
     actorId,
     action: "exam_asset_uploaded",
     resourceType: "exam",

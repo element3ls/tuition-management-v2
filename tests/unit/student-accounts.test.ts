@@ -11,13 +11,17 @@ const input = {
 };
 
 const userId = "11111111-1111-4111-8111-111111111111";
+const organizationId = "01000000-0000-4000-8000-000000000001";
 
-type TableName = "profiles" | "student_profiles" | "user_roles";
+type TableName = "profiles" | "student_profiles" | "organization_memberships" | "user_roles";
 
 function createSupabaseMock(failingTable?: TableName) {
   const insert = {
     profiles: vi.fn().mockResolvedValue({ error: failingTable === "profiles" ? { message: "profile failed" } : null }),
     student_profiles: vi.fn().mockResolvedValue({ error: failingTable === "student_profiles" ? { message: "student profile failed" } : null }),
+    organization_memberships: vi.fn().mockResolvedValue({
+      error: failingTable === "organization_memberships" ? { message: "membership failed" } : null
+    }),
     user_roles: vi.fn().mockResolvedValue({ error: failingTable === "user_roles" ? { message: "role failed" } : null })
   };
   const createUser = vi.fn().mockResolvedValue({ data: { user: { id: userId } }, error: null });
@@ -47,6 +51,7 @@ describe("student account creation", () => {
 
     await expect(
       createStudentAccount(input, {
+        organizationId,
         actorId: "actor-id",
         studentRoleId: "student-role-id",
         supabase: mock.supabase,
@@ -67,8 +72,22 @@ describe("student account creation", () => {
       is_active: true,
       must_change_password: true
     });
+    expect(mock.insert.student_profiles).toHaveBeenCalledWith({
+      organization_id: organizationId,
+      user_id: userId,
+      guardian_name: null,
+      phone: null,
+      notes: null
+    });
+    expect(mock.insert.organization_memberships).toHaveBeenCalledWith({
+      organization_id: organizationId,
+      user_id: userId,
+      role: "student",
+      status: "active"
+    });
 
     const auditPayload = writeAudit.mock.calls[0][0];
+    expect(auditPayload.organizationId).toBe(organizationId);
     expect(auditPayload.afterData).not.toHaveProperty("password");
     expect(auditPayload.afterData).toMatchObject({
       email: "ada@example.com",
@@ -77,7 +96,7 @@ describe("student account creation", () => {
     });
   });
 
-  it.each<TableName>(["profiles", "student_profiles", "user_roles"])(
+  it.each<TableName>(["profiles", "student_profiles", "organization_memberships", "user_roles"])(
     "removes the Auth user when the %s write fails",
     async (failingTable) => {
       vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -85,6 +104,7 @@ describe("student account creation", () => {
       const writeAudit = vi.fn().mockResolvedValue(undefined);
 
       const result = await createStudentAccount(input, {
+        organizationId,
         actorId: "actor-id",
         studentRoleId: "student-role-id",
         supabase: mock.supabase,
@@ -106,6 +126,7 @@ describe("student account creation", () => {
 
     await expect(
       createStudentAccount(input, {
+        organizationId,
         actorId: "actor-id",
         studentRoleId: "student-role-id",
         supabase: mock.supabase

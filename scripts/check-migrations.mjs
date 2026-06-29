@@ -29,6 +29,7 @@ const requiredTables = [
   "exam_questions",
   "exam_assets",
   "exam_processing_runs",
+  "ai_usage_events",
   "access_grants",
   "tags",
   "content_tags",

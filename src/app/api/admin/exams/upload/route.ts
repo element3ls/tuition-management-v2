@@ -4,6 +4,7 @@ import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { prepareExamAssetUpload } from "@/lib/exams/assets";
 import { examCreateInputSchema } from "@/lib/exams/validation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentOrganizationId } from "@/lib/tenancy/server";
 
 export async function POST(request: Request) {
   const { user } = await requireAdminAccess();
@@ -17,9 +18,10 @@ export async function POST(request: Request) {
   }
 
   const supabase = createAdminClient();
+  const organizationId = await getCurrentOrganizationId();
   const [{ data: subject }, { data: chapters, error: chaptersError }] = await Promise.all([
-    supabase.from("subjects").select("id").eq("id", parsed.data.subjectId).maybeSingle(),
-    supabase.from("chapters").select("id, subject_id").in("id", parsed.data.chapterIds)
+    supabase.from("subjects").select("id").eq("organization_id", organizationId).eq("id", parsed.data.subjectId).maybeSingle(),
+    supabase.from("chapters").select("id, subject_id").eq("organization_id", organizationId).in("id", parsed.data.chapterIds)
   ]);
   if (!subject) return NextResponse.json({ error: "Selected subject was not found." }, { status: 400 });
   if (
@@ -34,6 +36,7 @@ export async function POST(request: Request) {
   const examId = crypto.randomUUID();
   const initialStatus = parsed.data.intakeMode === "handwritten_images" ? "review" : "draft";
   const { error: examError } = await supabase.from("exams").insert({
+    organization_id: organizationId,
     id: examId,
     subject_id: parsed.data.subjectId,
     title: parsed.data.title,
@@ -46,10 +49,10 @@ export async function POST(request: Request) {
   if (examError) return NextResponse.json({ error: examError.message }, { status: 500 });
 
   const { error: linksError } = await supabase.from("exam_chapters").insert(
-    parsed.data.chapterIds.map((chapterId) => ({ exam_id: examId, chapter_id: chapterId }))
+    parsed.data.chapterIds.map((chapterId) => ({ organization_id: organizationId, exam_id: examId, chapter_id: chapterId }))
   );
   if (linksError) {
-    await supabase.from("exams").delete().eq("id", examId);
+    await supabase.from("exams").delete().eq("organization_id", organizationId).eq("id", examId);
     return NextResponse.json({ error: linksError.message }, { status: 500 });
   }
 
@@ -57,6 +60,7 @@ export async function POST(request: Request) {
     const uploads = [];
     for (const asset of parsed.data.assets) {
       const prepared = await prepareExamAssetUpload({
+        organizationId,
         examId,
         actorId: user.id,
         role: asset.role,
@@ -72,7 +76,7 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ examId, status: initialStatus, uploads });
   } catch (error) {
-    await supabase.from("exams").delete().eq("id", examId);
+    await supabase.from("exams").delete().eq("organization_id", organizationId).eq("id", examId);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not prepare uploads." }, { status: 500 });
   }
 }
