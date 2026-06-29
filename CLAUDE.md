@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Next.js (App Router) MVP for a tuition center to assign learning content to students. Admins manage students, groups, syllabus content, recordings, solution materials, exams, access grants, audit logs, and tags. Students only see published content they have permission to access. Backed by Supabase (Postgres + Auth + Storage), with an OpenAI-powered exam intake/transcription pipeline.
 
-Detailed behavioral docs live in `documentation.md` (architecture/permissions/workflows), `RELEASE_FLOW.md` (staging/production release flow), and `ADMIN_USAGE_GUIDE.md` (client-facing admin instructions). Read these for feature-level detail before making changes to permissions, exams, storage, or deployment.
+Detailed behavioral docs live in `documentation.md` (architecture/permissions/workflows), `RELEASE_FLOW.md` (staging/production release flow), `BILLING.md` (deferred SaaS billing plan), and `ADMIN_USAGE_GUIDE.md` (client-facing admin instructions). Read these for feature-level detail before making changes to permissions, exams, storage, billing, or deployment.
 
 ## Commands
 

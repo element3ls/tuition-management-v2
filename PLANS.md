@@ -1460,6 +1460,7 @@ Use this checklist while implementing.
 - 2026-05-18: Latest local code passes E2E against live Supabase using UAT users. Deployed UAT passed after manual Vercel production redeploy from latest `main`.
 - 2026-05-18: Added `ADMIN_USAGE_GUIDE.md` for client handoff and marked MVP completion checklist complete.
 - 2026-06-29: SaaS release flow is trunk-based for now. Keep `main` production-ready, use target-specific env files for staging/production, and run the release gate plus Supabase/UAT checks from `RELEASE_FLOW.md` instead of maintaining long-lived `staging` and `live` branches.
+- 2026-06-29: Billing remains deferred. Organizations now have billing-ready fields for manual billing and future Stripe integration, but product access is not automatically gated by payment state.
 
 ---
 

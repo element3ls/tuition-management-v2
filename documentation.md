@@ -286,7 +286,7 @@ scripts                 Local verification helpers
 
 Use separate Supabase projects for local, staging, and production when moving beyond MVP validation. Set environment variables per environment, run migrations, seed or create the first super admin, verify private buckets, then deploy the Next.js app to Vercel or the chosen host.
 
-The detailed staging and production flow lives in `RELEASE_FLOW.md`. For now, keep `main` as the production-ready branch and use a staging Vercel project or deployment environment with staging Supabase credentials instead of maintaining a long-lived `staging` branch.
+The detailed staging and production flow lives in `RELEASE_FLOW.md`. Billing deferral and future Stripe rollout notes live in `BILLING.md`. For now, keep `main` as the production-ready branch and use a staging Vercel project or deployment environment with staging Supabase credentials instead of maintaining a long-lived `staging` branch.
 
 Before a staging release, run:
 

@@ -43,4 +43,19 @@ if (missing.length > 0) {
   throw new Error(`Migration missing required tables: ${missing.join(", ")}`);
 }
 
-console.log(`Checked ${files.length} migration file(s). Required MVP tables are present.`);
+const requiredOrganizationColumns = [
+  "billing_status",
+  "billing_plan",
+  "billing_email",
+  "stripe_customer_id",
+  "stripe_subscription_id",
+  "trial_ends_at",
+  "current_period_ends_at"
+];
+const missingOrganizationColumns = requiredOrganizationColumns.filter((column) => !sql.includes(column));
+
+if (missingOrganizationColumns.length > 0) {
+  throw new Error(`Migration missing organization billing columns: ${missingOrganizationColumns.join(", ")}`);
+}
+
+console.log(`Checked ${files.length} migration file(s). Required MVP tables and SaaS billing columns are present.`);

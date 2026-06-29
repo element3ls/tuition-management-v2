@@ -1,5 +1,6 @@
 export type RoleName = "student" | "teacher" | "admin" | "super_admin";
 export type TenantRoleName = "owner" | "admin" | "teacher" | "student";
+export type BillingStatus = "manual" | "trialing" | "active" | "past_due" | "paused" | "canceled" | "unpaid";
 
 export type ContentStatus = "draft" | "published" | "archived";
 
@@ -76,6 +77,13 @@ export type Organization = {
   name: string;
   slug: string;
   status: "active" | "suspended" | "archived";
+  billing_status: BillingStatus;
+  billing_plan: string;
+  billing_email: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  trial_ends_at: string | null;
+  current_period_ends_at: string | null;
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;

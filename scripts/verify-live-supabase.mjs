@@ -70,6 +70,31 @@ try {
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'organizations') as organization_tables,
       (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'organization_memberships') as organization_membership_tables,
       (select count(*)::int from public.organizations where status = 'active') as active_organizations,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'organizations' and column_name = 'billing_status') as organization_billing_status_columns,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'organizations' and column_name = 'billing_plan') as organization_billing_plan_columns,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'organizations' and column_name = 'billing_email') as organization_billing_email_columns,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'organizations' and column_name = 'stripe_customer_id') as organization_stripe_customer_columns,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'organizations' and column_name = 'stripe_subscription_id') as organization_stripe_subscription_columns,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'organizations' and column_name = 'trial_ends_at') as organization_trial_columns,
+      (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'organizations' and column_name = 'current_period_ends_at') as organization_current_period_columns,
+      (
+        select case when count(*) = 2 then 1 else 0 end
+        from pg_constraint
+        where connamespace = 'public'::regnamespace
+          and conname = any(array[
+            'organizations_billing_status_check',
+            'organizations_billing_plan_check'
+          ])
+      ) as organization_billing_constraints,
+      (
+        select case when not exists (
+          select 1
+          from public.organizations
+          where billing_status is null
+             or billing_plan is null
+             or length(trim(billing_plan)) = 0
+        ) then 1 else 0 end
+      ) as organization_billing_integrity,
       (select count(*)::int from public.student_profiles) as student_profiles,
       (select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'student_profiles' and column_name = 'organization_id') as student_profile_organization_columns,
       (select count(*)::int from public.content_groups) as groups,
@@ -260,6 +285,7 @@ try {
         counts,
         integrity,
         privateBuckets: ["solution-materials", "exam-sources", "exam-assets"],
+        organizationBillingReady: true,
         signedUrlCreated: true
       },
       null,

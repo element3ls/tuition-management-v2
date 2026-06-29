@@ -29,6 +29,13 @@ export const demoData: AppData = {
       name: "Legacy Tuition Center",
       slug: "legacy-tuition-center",
       status: "active",
+      billing_status: "manual",
+      billing_plan: "mvp",
+      billing_email: null,
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+      trial_ends_at: null,
+      current_period_ends_at: null,
       metadata: { source: "demo" },
       created_at: now,
       updated_at: now

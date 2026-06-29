@@ -115,3 +115,4 @@ Before promoting a release, confirm:
 - Cross-tenant tests are passing in the full test suite.
 - Storage keys remain tenant-prefixed.
 - OpenAI usage events include `organization_id`.
+- Organization billing columns exist with manual defaults; billing state is not yet used to gate access.
