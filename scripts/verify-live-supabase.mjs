@@ -106,6 +106,9 @@ try {
     where profile.id is null;
   `);
   const integrity = integrityRows[0];
+  if (Number(integrity.auth_users_without_profiles) > 0) {
+    throw new Error(`Verification failed: auth_users_without_profiles=${integrity.auth_users_without_profiles}`);
+  }
 
   const { data: signedUrlData, error: signedUrlError } = await supabase.storage
     .from("solution-materials")
