@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Next.js (App Router) MVP for a tuition center to assign learning content to students. Admins manage students, groups, syllabus content, recordings, solution materials, exams, access grants, audit logs, and tags. Students only see published content they have permission to access. Backed by Supabase (Postgres + Auth + Storage), with an OpenAI-powered exam intake/transcription pipeline.
 
-Detailed behavioral docs live in `documentation.md` (architecture/permissions/workflows) and `ADMIN_USAGE_GUIDE.md` (client-facing admin instructions). Read these for feature-level detail before making changes to permissions, exams, or storage.
+Detailed behavioral docs live in `documentation.md` (architecture/permissions/workflows), `RELEASE_FLOW.md` (staging/production release flow), and `ADMIN_USAGE_GUIDE.md` (client-facing admin instructions). Read these for feature-level detail before making changes to permissions, exams, storage, or deployment.
 
 ## Commands
 
@@ -19,6 +19,9 @@ npm run test:watch        # vitest watch mode
 npm run test:e2e          # starts dev server, runs Playwright, stops server
 npm run test:e2e:live      # Playwright against deployed UAT
 npm run build             # production build
+npm run release:check      # local release gate
+npm run release:check:staging
+npm run release:check:production
 npm run db:check          # check migrations
 npm run db:live           # apply migrations + seed to live Supabase (SUPABASE_DB_URL)
 npm run db:create-uat-users

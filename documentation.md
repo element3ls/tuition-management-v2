@@ -286,13 +286,23 @@ scripts                 Local verification helpers
 
 Use separate Supabase projects for local, staging, and production when moving beyond MVP validation. Set environment variables per environment, run migrations, seed or create the first super admin, verify private buckets, then deploy the Next.js app to Vercel or the chosen host.
 
+The detailed staging and production flow lives in `RELEASE_FLOW.md`. For now, keep `main` as the production-ready branch and use a staging Vercel project or deployment environment with staging Supabase credentials instead of maintaining a long-lived `staging` branch.
+
+Before a staging release, run:
+
+```bash
+npm run release:check:staging
+npm run db:live -- --env-file=.env.staging.local
+npm run db:verify-live -- --env-file=.env.staging.local
+```
+
 Current Vercel deployment is live at `https://tuition-management-v2.vercel.app`. Logged-out `/dashboard` and `/admin` requests redirect to `/login`, and deployed UAT passes with the dedicated UAT users.
 
 For deployed UAT, run:
 
 ```bash
-npm run db:create-uat-users
-npm run test:e2e:live
+npm run db:create-uat-users -- --env-file=.env.staging.local --credentials-file=.supabase/uat-users.staging.local.json
+npm run test:e2e:live -- --base-url=https://your-staging-url.example.com --credentials-file=.supabase/uat-users.staging.local.json
 ```
 
-UAT credentials are stored locally in `.supabase/uat-users.local.json` and should not be committed.
+UAT credentials are stored locally under `.supabase/` and should not be committed.

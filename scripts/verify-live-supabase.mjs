@@ -16,6 +16,11 @@ function loadEnvFile(path) {
   }
 }
 
+function optionValue(name, fallback) {
+  const prefix = `--${name}=`;
+  return process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) ?? fallback;
+}
+
 function requiredEnv(name) {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required.`);
@@ -33,7 +38,7 @@ async function findUserByEmail(supabase, email) {
   return null;
 }
 
-loadEnvFile(".env.local");
+loadEnvFile(optionValue("env-file", process.env.SUPABASE_ENV_FILE ?? ".env.local"));
 
 const dbUrl = requiredEnv("SUPABASE_DB_URL");
 const supabaseUrl = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");

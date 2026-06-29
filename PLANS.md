@@ -1459,6 +1459,7 @@ Use this checklist while implementing.
 - 2026-05-18: Created dedicated live UAT users `uat-student@example.com` and `uat-admin@example.com`; credentials are stored only in ignored local file `.supabase/uat-users.local.json`.
 - 2026-05-18: Latest local code passes E2E against live Supabase using UAT users. Deployed UAT passed after manual Vercel production redeploy from latest `main`.
 - 2026-05-18: Added `ADMIN_USAGE_GUIDE.md` for client handoff and marked MVP completion checklist complete.
+- 2026-06-29: SaaS release flow is trunk-based for now. Keep `main` production-ready, use target-specific env files for staging/production, and run the release gate plus Supabase/UAT checks from `RELEASE_FLOW.md` instead of maintaining long-lived `staging` and `live` branches.
 
 ---
 

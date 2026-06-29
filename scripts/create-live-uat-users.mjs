@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import crypto from "node:crypto";
 import pg from "pg";
 import { createClient } from "@supabase/supabase-js";
 
 const studentEmail = "uat-student@example.com";
 const adminEmail = "uat-admin@example.com";
+const organizationId = "01000000-0000-4000-8000-000000000001";
 
 function loadEnvFile(path) {
   if (!existsSync(path)) return;
@@ -19,6 +20,11 @@ function loadEnvFile(path) {
     if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1, -1);
     if (!process.env[key]) process.env[key] = value;
   }
+}
+
+function optionValue(name, fallback) {
+  const prefix = `--${name}=`;
+  return process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) ?? fallback;
 }
 
 function requiredEnv(name) {
@@ -70,7 +76,9 @@ async function roleId(client, name) {
   return rows[0].id;
 }
 
-loadEnvFile(".env.local");
+const credentialsPath = optionValue("credentials-file", process.env.UAT_CREDENTIALS_FILE ?? join(".supabase", "uat-users.local.json"));
+
+loadEnvFile(optionValue("env-file", process.env.SUPABASE_ENV_FILE ?? ".env.local"));
 
 const dbUrl = requiredEnv("SUPABASE_DB_URL");
 const supabaseUrl = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
@@ -110,14 +118,27 @@ try {
 
   await client.query(
     `
-    insert into public.student_profiles (user_id, guardian_name, phone, notes)
-    values ($1, 'UAT Guardian', '+60000000000', 'Automated deployed UAT student.')
+    insert into public.organization_memberships (organization_id, user_id, role, status)
+    values ($1, $2, 'student', 'active'), ($1, $3, 'owner', 'active')
+    on conflict (organization_id, user_id) do update
+    set role = excluded.role,
+        status = 'active',
+        updated_at = now();
+  `,
+    [organizationId, student.id, admin.id]
+  );
+
+  await client.query(
+    `
+    insert into public.student_profiles (organization_id, user_id, guardian_name, phone, notes)
+    values ($1, $2, 'UAT Guardian', '+60000000000', 'Automated deployed UAT student.')
     on conflict (user_id) do update
-    set guardian_name = excluded.guardian_name,
+    set organization_id = excluded.organization_id,
+        guardian_name = excluded.guardian_name,
         phone = excluded.phone,
         notes = excluded.notes;
   `,
-    [student.id]
+    [organizationId, student.id]
   );
 
   await client.query(
@@ -131,24 +152,25 @@ try {
 
   await client.query(
     `
-    insert into public.student_group_memberships (student_id, group_id, status, starts_at, expires_at)
-    values ($1, '10000000-0000-4000-8000-000000000001', 'active', now() - interval '1 day', null)
+    insert into public.student_group_memberships (organization_id, student_id, group_id, status, starts_at, expires_at)
+    values ($1, $2, '10000000-0000-4000-8000-000000000001', 'active', now() - interval '1 day', null)
     on conflict (student_id, group_id) do update
-    set status = 'active',
+    set organization_id = excluded.organization_id,
+        status = 'active',
         starts_at = excluded.starts_at,
         expires_at = null;
   `,
-    [student.id]
+    [organizationId, student.id]
   );
 
-  mkdirSync(".supabase", { recursive: true });
+  mkdirSync(dirname(credentialsPath), { recursive: true });
   writeFileSync(
-    join(".supabase", "uat-users.local.json"),
+    credentialsPath,
     `${JSON.stringify({ studentEmail, adminEmail, password: sharedPassword }, null, 2)}\n`,
     { mode: 0o600 }
   );
 
-  console.log("Created/updated UAT auth users and wrote credentials to .supabase/uat-users.local.json");
+  console.log(`Created/updated UAT auth users and wrote credentials to ${credentialsPath}`);
 } finally {
   await client.end();
 }
