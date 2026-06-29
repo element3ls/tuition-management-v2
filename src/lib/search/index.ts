@@ -33,9 +33,9 @@ function tagsFor(data: AppData, resourceType: SearchResult["type"], resourceId: 
   return data.tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => tag.name);
 }
 
-export async function searchAccessibleContent(input: { userId: string; query: string; data: AppData }) {
+export async function searchAccessibleContent(input: { userId: string; query: string; data: AppData; organizationId?: string }) {
   const { userId, query, data } = input;
-  const organizationId = data.organizations[0]?.id;
+  const organizationId = input.organizationId ?? data.organizations[0]?.id;
   const results: SearchResult[] = [];
 
   for (const chapter of data.chapters.sort(bySortOrderThenName)) {

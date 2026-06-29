@@ -33,8 +33,9 @@ export async function createMaterialSignedUrl(input: {
   materialId: string;
   permission: PermissionLevel;
   data: AppData;
+  organizationId?: string;
 }) {
-  const organizationId = input.data.organizations[0]?.id;
+  const organizationId = input.organizationId ?? input.data.organizations[0]?.id;
   const material = input.data.solutionMaterials.find((item) => item.id === input.materialId);
   if (!material) {
     return { ok: false as const, error: "Material not found." };
@@ -64,6 +65,7 @@ export async function createMaterialSignedUrl(input: {
     eventType: input.permission === "download" ? "solution_material_downloaded" : "solution_material_opened",
     resourceType: "solution_material",
     resourceId: input.materialId,
+    organizationId,
     metadata: { file_key: material.file_key }
   });
 

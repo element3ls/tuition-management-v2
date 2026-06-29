@@ -283,27 +283,32 @@ export async function getAccessibleResourceIds(params: AccessibleIdsParams, data
   return ids.sort();
 }
 
-export async function getAccessibleContentTree(userId: string, data?: AppData) {
+export async function getAccessibleContentTree(userId: string, data?: AppData, organizationId?: string) {
   const resolvedData = getData(data);
-  const organizationId = resolvedData.organizations[0]?.id;
+  const resolvedOrganizationId = organizationId ?? resolvedData.organizations[0]?.id;
   const accessibleSubjects = new Set(
-    await getAccessibleResourceIds({ userId, resourceType: "subject", permission: "view", organizationId }, resolvedData)
+    await getAccessibleResourceIds({ userId, resourceType: "subject", permission: "view", organizationId: resolvedOrganizationId }, resolvedData)
   );
   const accessibleChapters = new Set(
-    await getAccessibleResourceIds({ userId, resourceType: "chapter", permission: "view", organizationId }, resolvedData)
+    await getAccessibleResourceIds({ userId, resourceType: "chapter", permission: "view", organizationId: resolvedOrganizationId }, resolvedData)
   );
   const accessibleQuestions = new Set(
-    await getAccessibleResourceIds({ userId, resourceType: "question", permission: "view", organizationId }, resolvedData)
+    await getAccessibleResourceIds({ userId, resourceType: "question", permission: "view", organizationId: resolvedOrganizationId }, resolvedData)
   );
   const accessibleRecordings = new Set(
-    await getAccessibleResourceIds({ userId, resourceType: "recording", permission: "view", organizationId }, resolvedData)
+    await getAccessibleResourceIds({ userId, resourceType: "recording", permission: "view", organizationId: resolvedOrganizationId }, resolvedData)
   );
   const accessibleMaterials = new Set(
-    await getAccessibleResourceIds({ userId, resourceType: "solution_material", permission: "view", organizationId }, resolvedData)
+    await getAccessibleResourceIds({
+      userId,
+      resourceType: "solution_material",
+      permission: "view",
+      organizationId: resolvedOrganizationId
+    }, resolvedData)
   );
 
   const years = resolvedData.years
-    .filter((year) => organizationMatches(year, organizationId))
+    .filter((year) => organizationMatches(year, resolvedOrganizationId))
     .filter((year) => year.status === "published")
     .map((year) => ({
       ...year,
