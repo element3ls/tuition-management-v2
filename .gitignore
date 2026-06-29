@@ -10,6 +10,6 @@ dist/
 .env.*.local
 !.env.example
 .supabase/
-
+.papers/
 .vercel
 .env*.local
