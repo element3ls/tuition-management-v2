@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 
 const targets = new Set(["local", "staging", "production"]);
 const args = process.argv.slice(2);
+const originalEnv = { ...process.env };
 
 function usage() {
   console.log(`Usage: node scripts/check-release-readiness.mjs [local|staging|production] [--env-file=.env.staging.local] [--skip-commands]
@@ -76,10 +77,12 @@ function validateReleaseEnv(target) {
 }
 
 function run(command, commandArgs) {
-  const result = spawnSync(command, commandArgs, {
+  const isWindows = process.platform === "win32";
+  const result = spawnSync(isWindows ? `${command} ${commandArgs.join(" ")}` : command, isWindows ? [] : commandArgs, {
     cwd: process.cwd(),
+    env: commandArgs[0] === "test" ? originalEnv : process.env,
     stdio: "inherit",
-    shell: false
+    shell: isWindows
   });
 
   if (result.error) throw result.error;
